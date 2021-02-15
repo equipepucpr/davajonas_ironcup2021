@@ -133,6 +133,13 @@ void setup() {
       MotorR(255);
       while(1) {};
       break;
+    case 0x08: //Testa se D13 funciona (pull-up externo?)
+      while (1) {
+        digitalWrite(LED, LOW);
+        delay(500);
+        digitalWrite(LED, HIGH);
+        delay(500);
+      }
   }
   MotorL(0);
   MotorR(0);
