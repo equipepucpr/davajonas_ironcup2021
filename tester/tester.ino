@@ -101,8 +101,8 @@ void setup() {
       delay(200);
       break;
     case 0x02: //Linha reta com pwm de 100% -> Parar na linha branca porém não na linha marrom -> Conferir o tempo que o robô demorou para cruzar o dojo
-      MotorL(255);
-      MotorR(255);
+      MotorL(200);
+      MotorR(200);
       while (!lineCheck()) {};
       MotorL(-255);
       MotorR(-255);
@@ -121,17 +121,21 @@ void setup() {
     case 0x05: //Andar reto com pwm de 50% -> parar quando ler algo no sensor de presença -> conferir funcionamento dos sensores de presença
       MotorL(127);
       MotorR(127);
+      delay(200);
       while (!digitalRead(distL) && !digitalRead(distR)) {};
+      MotorL(-127);
+      MotorR(-127);
+      delay(200);
       break;
     case 0x06: //Rodar em circulo no dojo com raio 13,5cm -> robo na posição B5 -> conferir calculos geometricos
       MotorL(70);
       MotorR(127);
-      while(1) {};
+      while (!lineCheck()) {};
       break;
     case 0x07: //Rodar em circulo no dojo com raio 28,5 -> robo na posição A5 -> conferir calculos geometricos
-      MotorL(193);
-      MotorR(255);
-      while(1) {};
+      MotorL(84);
+      MotorR(127);
+      while (!lineCheck()) {};
       break;
     case 0x08: //Testa se D13 funciona (pull-up externo?)
       while (1) {
