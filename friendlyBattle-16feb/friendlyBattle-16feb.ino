@@ -92,57 +92,74 @@ void setup() {
 
   int dip = readDIP();
   switch (dip) {
-    case 0x01: //Linha reta com pwm de 50% -> Parar na linha branca porém não na linha marrom -> Conferir o tempo que o robô demorou para cruzar o dojo
-      MotorL(127);
-      MotorR(127);
-      while (!lineCheck()) {};
-      MotorL(-127);
-      MotorR(-127);
-      delay(200);
+    case 0x0: //Frente + Busca até a linha
+        MotorL(200);
+        MotorR(200);
+      while(true){
+        decisionMaking();
+        MotorL(200);
+        MotorR(200);
+      }
       break;
-    case 0x02: //Linha reta com pwm de 100% -> Parar na linha branca porém não na linha marrom -> Conferir o tempo que o robô demorou para cruzar o dojo
-      MotorL(200);
-      MotorR(200);
-      while (!lineCheck()) {};
-      MotorL(-255);
-      MotorR(-255);
-      delay(200);
+    case 0x01: //Curva direita fechada + Busca até a linha 
+        MotorL(127);
+        MotorR(70);
+      while(true){
+        decisionMaking();
+        MotorL(200);
+        MotorR(200);
+      }
       break;
-    case 0x03: //Rodar por 1s com pwm de 50% -> conferir quantas voltas o robô deu
-      MotorL(127);
-      MotorR(-127);
-      delay(1000);
+    case 0x02: //Curva direita aberta + Busca até a linha
+        MotorL(127);
+        MotorR(75);
+      while(true){
+        decisionMaking();
+        MotorL(200);
+        MotorR(200);
+      }
       break;
-    case 0x04: //Rodar por 1s com pwm de 100% -> conferir quantas voltas o robô deu
-      MotorL(-255);
-      MotorR(255);
-      delay(1000);
+    case 0x03: //Curva esquerda fechada + Busca até a linha 
+        MotorL(70);
+        MotorR(127);
+      while(true){
+        decisionMaking();
+      }
       break;
-    case 0x05: //Andar reto com pwm de 50% -> parar quando ler algo no sensor de presença -> conferir funcionamento dos sensores de presença
-      MotorL(127);
-      MotorR(127);
-      delay(200);
-      while (!digitalRead(distL) && !digitalRead(distR)) {};
-      MotorL(-127);
-      MotorR(-127);
-      delay(200);
+    case 0x04: //Curva esquerda aberta + Busca até a linha 
+        MotorL(75);
+        MotorR(127);
+      while(true){
+        decisionMaking();
+        MotorL(200);
+        MotorR(200);
+      }
       break;
-    case 0x06: //Rodar em circulo no dojo com raio 13,5cm -> robo na posição B5 -> conferir calculos geometricos
-      MotorL(70);
-      MotorR(127);
-      while (!lineCheck()) {};
+    case 0x05: //Desvio 45º Direito + Busca até a linha 
+        MotorL(200);
+        MotorR(180);
+      while(true){
+        decisionMaking();
+        MotorL(200);
+        MotorR(200);
+      }
       break;
-    case 0x07: //Rodar em circulo no dojo com raio 28,5 -> robo na posição A5 -> conferir calculos geometricos
-      MotorL(84);
-      MotorR(127);
-      while (!lineCheck()) {};
+    case 0x06: //Desvio 45º Esquerdo + Busca até a linha 
+        MotorL(180);
+        MotorR(200);
+      while(true){
+        decisionMaking();
+        MotorL(200);
+        MotorR(200);
+      }
       break;
-    case 0x08: //Testa se D13 funciona (pull-up externo?)
-      while (1) {
-        digitalWrite(LED, LOW);
-        delay(500);
-        digitalWrite(LED, HIGH);
-        delay(500);
+    case 0x07: //Parado 3s + Busca até a linha
+      for(int i = 0; i <= 3000; i++){
+        decisionMaking();
+        delay(1);
+      }
+      while (true) {
+        decisionMaking();
       }
   }
   MotorL(0);
@@ -252,19 +269,19 @@ int readDIP(){
 
 void decisionMaking(){
   //DEFENSE
-  if(lineCheck == 0b01){ //right detect
+  if(lineCheck() == 0b01){ //right detect
     MotorL(-255);
     MotorR(255);
     delay(100);
     MotorL(200);
     MotorR(200);
-  } else if(lineCheck == 0b10){ //left detect
+  } else if(lineCheck() == 0b10){ //left detect
     MotorL(255);
     MotorR(-255);
     delay(100);
     MotorL(200);
     MotorR(200);
-  } else if(lineCheck == 0b11){ //frontal detect
+  } else if(lineCheck() == 0b11){ //frontal detect
     MotorL(-200);
     MotorR(-200);
     delay(200);
@@ -276,10 +293,13 @@ void decisionMaking(){
   }
   //ATTACK
   if(digitalRead(distL) && !digitalRead(distR)){ //left detect
-    
+    MotorL(200);
+    MotorR(255);
   } else if(!digitalRead(distL) && digitalRead(distR)){ //right detect
-    
+    MotorL(255);
+    MotorR(200);
   } else if(digitalRead(distL) && digitalRead(distR)){ //frontal detect
-    
+    MotorL(255);
+    MotorR(255);
   }
 }
