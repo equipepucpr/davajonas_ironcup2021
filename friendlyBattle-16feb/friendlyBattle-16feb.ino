@@ -105,6 +105,7 @@ void setup() {
       for(int i = 0; i <=1000; i++){
         MotorL(127);
         MotorR(70);
+        decisionMaking();
         delay(1);
       }
       while(true){
@@ -117,6 +118,7 @@ void setup() {
       for(int i = 0; i <=1000; i++){
         MotorL(127);
         MotorR(75);
+        decisionMaking();
         delay(1);
       }
       while(true){
@@ -129,6 +131,7 @@ void setup() {
       for(int i = 0; i <=1000; i++){
         MotorL(70);
         MotorR(127);
+        decisionMaking();
         delay(1);
       }
       while(true){
@@ -139,6 +142,7 @@ void setup() {
       for(int i = 0; i <=1000; i++){
         MotorL(75);
         MotorR(127);
+        decisionMaking();
         delay(1);
       }
       while(true){
@@ -150,6 +154,7 @@ void setup() {
     case 0x05: //Desvio 45º Direito + Busca até a linha 
         MotorL(200);
         MotorR(180);
+        decisionMaking();
       while(true){
         decisionMaking();
         MotorL(200);
@@ -159,6 +164,7 @@ void setup() {
     case 0x06: //Desvio 45º Esquerdo + Busca até a linha 
         MotorL(180);
         MotorR(200);
+        decisionMaking();
       while(true){
         decisionMaking();
         MotorL(200);
@@ -194,6 +200,7 @@ void setup() {
       for(int i = 0; i <=1000; i++){
         MotorL(127);
         MotorR(70);
+        decisionMaking();
         delay(1);
       }
       while(true){
@@ -211,6 +218,7 @@ void setup() {
       for(int i = 0; i <=1000; i++){
         MotorL(127);
         MotorR(75);
+        decisionMaking();
         delay(1);
       }
       while(true){
@@ -228,6 +236,7 @@ void setup() {
       for(int i = 0; i <=1000; i++){
         MotorL(70);
         MotorR(127);
+        decisionMaking();
         delay(1);
       }
       while(true){
@@ -245,6 +254,7 @@ void setup() {
       for(int i = 0; i <=1000; i++){
         MotorL(75);
         MotorR(127);
+        decisionMaking();
         delay(1);
       }
       while(true){
@@ -261,6 +271,7 @@ void setup() {
     case 0x0D: //Desvio 45º Direito + Busca lenta alternada
         MotorL(200);
         MotorR(180);
+        decisionMaking();
       while(true){
         bool left = true;
         for(int i = 0; i <=500; i++){
@@ -275,6 +286,7 @@ void setup() {
     case 0x0E: //Desvio 45º Esquerdo + Busca lenta alternada 
         MotorL(180);
         MotorR(200);
+        decisionMaking();
       while(true){
         bool left = true;
         for(int i = 0; i <=500; i++){
