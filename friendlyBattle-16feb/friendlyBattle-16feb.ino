@@ -287,7 +287,7 @@ void decisionMaking(){
     delay(200);
     MotorL(255);
     MotorR(-255);
-    delay(100);
+    delay(200);
     MotorL(200);
     MotorR(200);
   }
