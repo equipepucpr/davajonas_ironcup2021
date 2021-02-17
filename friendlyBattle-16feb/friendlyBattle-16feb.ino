@@ -92,26 +92,18 @@ void setup() {
 
   int dip = readDIP();
   switch (dip) {
-    case 0x0: //Frente + Busca até a linha
-        MotorL(200);
-        MotorR(200);
+    case 0x0: //Frente + Busca até a linha -> A3
       while(true){
         decisionMaking();
         MotorL(200);
         MotorR(200);
       }
       break;
-    case 0x01: //Curva direita fechada + Busca até a linha 
-      for(int i = 0; i <=1000; i++){
-        MotorL(127);
-        MotorR(70);
-        decisionMaking();
-        delay(1);
-      }
+    case 0x01: //Curva direita fechada + Busca até a linha -> B5
       while(true){
+        MotorL(70);
+        MotorR(127);
         decisionMaking();
-        MotorL(200);
-        MotorR(200);
       }
       break;
     case 0x02: //Curva direita aberta + Busca até a linha
@@ -133,9 +125,6 @@ void setup() {
         MotorR(127);
         decisionMaking();
         delay(1);
-      }
-      while(true){
-        decisionMaking();
       }
       break;
     case 0x04: //Curva esquerda aberta + Busca até a linha 
@@ -426,33 +415,29 @@ void decisionMaking(){
     MotorL(-255);
     MotorR(255);
     delay(100);
-    MotorL(200);
-    MotorR(200);
   } else if(lineCheck() == 0b10){ //left detect
     MotorL(255);
     MotorR(-255);
     delay(100);
-    MotorL(200);
-    MotorR(200);
   } else if(lineCheck() == 0b11){ //frontal detect
-    MotorL(-200);
-    MotorR(-200);
-    delay(200);
+    MotorL(-255);
+    MotorR(-255);
+    delay(150);
     MotorL(255);
     MotorR(-255);
     delay(200);
-    MotorL(200);
-    MotorR(200);
   }
   //ATTACK
-  if(digitalRead(distL) && !digitalRead(distR)){ //left detect
-    MotorL(200);
-    MotorR(255);
-  } else if(!digitalRead(distL) && digitalRead(distR)){ //right detect
-    MotorL(255);
-    MotorR(200);
-  } else if(digitalRead(distL) && digitalRead(distR)){ //frontal detect
-    MotorL(255);
-    MotorR(255);
+  while (digitalRead(distL) || digitalRead(distR)) {
+    if(digitalRead(distL) && !digitalRead(distR)){ //left detect
+      MotorL(-200);
+      MotorR(200);
+    } else if(!digitalRead(distL) && digitalRead(distR)){ //right detect
+      MotorL(200);
+      MotorR(-200);
+    } else if(digitalRead(distL) && digitalRead(distR)){ //frontal detect
+      MotorL(255);
+      MotorR(255);
+    }
   }
 }
