@@ -411,15 +411,16 @@ int readDIP(){
 
 void decisionMaking(){
   //DEFENSE
-  if(lineCheck() == 0b01){ //right detect
+  uint8_t lineSensor = lineCheck();
+  if(lineSensor == 0b01){ //right detect
     MotorL(-255);
     MotorR(255);
     delay(100);
-  } else if(lineCheck() == 0b10){ //left detect
+  } else if(lineSensor == 0b10){ //left detect
     MotorL(255);
     MotorR(-255);
     delay(100);
-  } else if(lineCheck() == 0b11){ //frontal detect
+  } else if(lineSensor == 0b11){ //frontal detect
     MotorL(-255);
     MotorR(-255);
     delay(150);
