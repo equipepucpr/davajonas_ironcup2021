@@ -429,16 +429,19 @@ void decisionMaking(){
     delay(200);
   }
   //ATTACK
-  while (digitalRead(distL) || digitalRead(distR)) {
-    if(digitalRead(distL) && !digitalRead(distR)){ //left detect
+  uint8_t sensorL, sensorR;
+  do {
+    sensorL = digitalRead(distL);
+    sensorR = digitalRead(distR);
+    if(sensorL && !sensorR){ //left detect
       MotorL(-200);
       MotorR(200);
-    } else if(!digitalRead(distL) && digitalRead(distR)){ //right detect
+    } else if(!sensorL && sensorR){ //right detect
       MotorL(200);
       MotorR(-200);
-    } else if(digitalRead(distL) && digitalRead(distR)){ //frontal detect
+    } else if(sensorL && sensorR){ //frontal detect
       MotorL(255);
       MotorR(255);
     }
-  }
+  } while (sensorL || sensorR);
 }
