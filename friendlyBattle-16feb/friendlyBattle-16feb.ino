@@ -102,8 +102,11 @@ void setup() {
       }
       break;
     case 0x01: //Curva direita fechada + Busca até a linha 
+      for(int i = 0; i <=1000; i++){
         MotorL(127);
         MotorR(70);
+        delay(1);
+      }
       while(true){
         decisionMaking();
         MotorL(200);
@@ -111,8 +114,11 @@ void setup() {
       }
       break;
     case 0x02: //Curva direita aberta + Busca até a linha
+      for(int i = 0; i <=1000; i++){
         MotorL(127);
         MotorR(75);
+        delay(1);
+      }
       while(true){
         decisionMaking();
         MotorL(200);
@@ -120,15 +126,21 @@ void setup() {
       }
       break;
     case 0x03: //Curva esquerda fechada + Busca até a linha 
+      for(int i = 0; i <=1000; i++){
         MotorL(70);
         MotorR(127);
+        delay(1);
+      }
       while(true){
         decisionMaking();
       }
       break;
     case 0x04: //Curva esquerda aberta + Busca até a linha 
+      for(int i = 0; i <=1000; i++){
         MotorL(75);
         MotorR(127);
+        delay(1);
+      }
       while(true){
         decisionMaking();
         MotorL(200);
@@ -160,7 +172,136 @@ void setup() {
       }
       while (true) {
         decisionMaking();
+        MotorL(200);
+        MotorR(200);
       }
+      break;
+    case 0x08: //Frente + Busca lenta alternada
+        MotorL(200);
+        MotorR(200);
+      while(true){
+        bool left = true;
+        for(int i = 0; i <=500; i++){
+          decisionMaking();
+          MotorL(180 + left ? 20 : 0);
+          MotorR(200 - left ? 20 : 0);
+          delay(1);
+          if(i == 500) left = !left;
+        }
+      }
+      break;
+    case 0x09: //Curva direita fechada + Busca lenta alternada
+      for(int i = 0; i <=1000; i++){
+        MotorL(127);
+        MotorR(70);
+        delay(1);
+      }
+      while(true){
+        bool left = true;
+        for(int i = 0; i <=500; i++){
+          decisionMaking();
+          MotorL(180 + left ? 20 : 0);
+          MotorR(200 - left ? 20 : 0);
+          delay(1);
+          if(i == 500) left = !left;
+        }
+      }
+      break;
+    case 0x0A: //Curva direita aberta + Busca lenta alternada
+      for(int i = 0; i <=1000; i++){
+        MotorL(127);
+        MotorR(75);
+        delay(1);
+      }
+      while(true){
+        bool left = true;
+        for(int i = 0; i <=500; i++){
+          decisionMaking();
+          MotorL(180 + left ? 20 : 0);
+          MotorR(200 - left ? 20 : 0);
+          delay(1);
+          if(i == 500) left = !left;
+        }
+      }
+      break;
+    case 0x0B: //Curva esquerda fechada + Busca lenta alternada 
+      for(int i = 0; i <=1000; i++){
+        MotorL(70);
+        MotorR(127);
+        delay(1);
+      }
+      while(true){
+        bool left = true;
+        for(int i = 0; i <=500; i++){
+          decisionMaking();
+          MotorL(180 + left ? 20 : 0);
+          MotorR(200 - left ? 20 : 0);
+          delay(1);
+          if(i == 500) left = !left;
+        }
+      }
+      break;
+    case 0x0C: //Curva esquerda aberta + Busca lenta alternada 
+      for(int i = 0; i <=1000; i++){
+        MotorL(75);
+        MotorR(127);
+        delay(1);
+      }
+      while(true){
+        bool left = true;
+        for(int i = 0; i <=500; i++){
+          decisionMaking();
+          MotorL(180 + left ? 20 : 0);
+          MotorR(200 - left ? 20 : 0);
+          delay(1);
+          if(i == 500) left = !left;
+        }
+      }
+      break;
+    case 0x0D: //Desvio 45º Direito + Busca lenta alternada
+        MotorL(200);
+        MotorR(180);
+      while(true){
+        bool left = true;
+        for(int i = 0; i <=500; i++){
+          decisionMaking();
+          MotorL(180 + left ? 20 : 0);
+          MotorR(200 - left ? 20 : 0);
+          delay(1);
+          if(i == 500) left = !left;
+        }
+      }
+      break;
+    case 0x0E: //Desvio 45º Esquerdo + Busca lenta alternada 
+        MotorL(180);
+        MotorR(200);
+      while(true){
+        bool left = true;
+        for(int i = 0; i <=500; i++){
+          decisionMaking();
+          MotorL(180 + left ? 20 : 0);
+          MotorR(200 - left ? 20 : 0);
+          delay(1);
+          if(i == 500) left = !left;
+        }
+      }
+      break;
+    case 0x0F: //Parado 3s + Busca até a linha
+      for(int i = 0; i <= 3000; i++){
+        decisionMaking();
+        delay(1);
+      }
+      while(true){
+        bool left = true;
+        for(int i = 0; i <=500; i++){
+          decisionMaking();
+          MotorL(180 + left ? 20 : 0);
+          MotorR(200 - left ? 20 : 0);
+          delay(1);
+          if(i == 500) left = !left;
+        }
+      }
+      break;
   }
   MotorL(0);
   MotorR(0);
