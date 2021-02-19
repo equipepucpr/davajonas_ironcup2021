@@ -4,7 +4,8 @@
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
-//#define debug
+#define debug
+//#define noDIP
 
 #ifdef debug
 #include <stdio.h>
@@ -52,6 +53,7 @@
 /*******PINOUT DEFINES - END*********/
 
 /*******FUNCTIONS*******/
+void decisionMaking();
 void MotorL(uint8_t, uint8_t); // left motor / motor esquerdo / motor izquierdo
 void MotorR(uint8_t, uint8_t); // right motor / motor direito / motor derecho
 uint8_t readDIP(); // read DIP switch / ler chave DIP / leer el interruptor DIP
@@ -145,62 +147,294 @@ int main(void)
 	
 	while (!(PIND & (1 << microST))) {};
 		
-	log("Starting...\n");
+	log("Starting...\n");		
 	uint8_t dip = readDIP();
-		
-	//RTDM()
-	while(1) {
-		  //DEFENSE
-		  uint8_t lineSensor = lineCheck();
-		  switch (lineSensor) {
-			  case 0b01: //right detect
-				  MotorL(BACKWARD(255));
-				  MotorR(FORWARD(255));
-				  _delay_ms(100);
-				  break;
-			  case 0b10:  //left detect
-				  MotorL(FORWARD(255));
-				  MotorR(BACKWARD(255));
-				  _delay_ms(100);
-				  break;
-			  case 0b11: //frontal detect
-				  MotorL(BACKWARD(255));
-				  MotorR(BACKWARD(255));
-				  _delay_ms(150);
-				  MotorL(FORWARD(255));
-				  MotorR(BACKWARD(255));
-				  _delay_ms(200);
-				  break;
-		  }
-		  //ATTACK
-		  uint8_t distSensor;
-		  do {
-			  distSensor = distCheck();
-			  switch (distSensor) {
-				case 0b01: //right detect
-					MotorL(FORWARD(200));
-					MotorR(BACKWARD(200));
-					break;
-				case 0b10: //left detect
-				 	MotorL(BACKWARD(200));
-				 	MotorR(FORWARD(200));
-				 	break;
-				case 0b11: //frontal detect
-					MotorL(FORWARD(255));
-					MotorR(FORWARD(255));
-					break;
-			  }
-#ifdef debug
-			  _delay_ms(1000);
-#endif
-		  } while (distSensor);
+	switch (dip) {
+		case 0x0: //Frente + Busca até a linha -> A3
+		while(1){
+			decisionMaking();
+			MotorL(FORWARD(200));
+			MotorR(FORWARD(200));
+		}
+		break;
+		case 0x01: //Curva direita fechada + Busca até a linha -> B5
+		for(uint16_t i = 0; i <=2000; i++){
+			MotorL(FORWARD(255));
+			MotorR(FORWARD(140));
+			//decisionMaking();
+			_delay_ms(1);
+		}
+		while(1){
+			decisionMaking();
+			MotorL(FORWARD(200));
+			MotorR(FORWARD(200));
+		}
+		break;
+		case 0x02: //Curva direita aberta + Busca até a linha
+		for(int i = 0; i <=1000; i++){
+			MotorL(FORWARD(127));
+			MotorR(FORWARD(75));
+			decisionMaking();
+			_delay_ms(1);
+		}
+		while(1){
+			decisionMaking();
+			MotorL(FORWARD(200));
+			MotorR(FORWARD(200));
+		}
+		break;
+		case 0x03: //Curva esquerda fechada + Busca até a linha
+		for(int i = 0; i <=1000; i++){
+			MotorL(FORWARD(70));
+			MotorR(FORWARD(127));
+			decisionMaking();
+			_delay_ms(1);
+		}
+		while(1){
+			decisionMaking();
+			MotorL(FORWARD(200));
+			MotorR(FORWARD(200));
+		}
+		break;
+		case 0x04: //Curva esquerda aberta + Busca até a linha
+		for(int i = 0; i <=1000; i++){
+			MotorL(FORWARD(75));
+			MotorR(FORWARD(127));
+			decisionMaking();
+			_delay_ms(1);
+		}
+		while(1){
+			decisionMaking();
+			MotorL(FORWARD(200));
+			MotorR(FORWARD(200));
+		}
+		break;
+		case 0x05: //Desvio 45º Direito + Busca até a linha
+		for(int i = 0; i <=1000; i++){
+			MotorL(FORWARD(200));
+			MotorR(FORWARD(180));
+			decisionMaking();
+			_delay_ms(1);
+		}
+		decisionMaking();
+		while(1){
+			decisionMaking();
+			MotorL(FORWARD(200));
+			MotorR(FORWARD(200));
+		}
+		break;
+		case 0x06: //Desvio 45º Esquerdo + Busca até a linha
+		for(int i = 0; i <=1000; i++){
+			MotorL(FORWARD(180));
+			MotorR(FORWARD(200));
+			decisionMaking();
+			_delay_ms(1);
+		}
+		while(1){
+			decisionMaking();
+			MotorL(FORWARD(200));
+			MotorR(FORWARD(200));
+		}
+		break;
+		case 0x07: //Parado 3s + Busca até a linha
+		for(int i = 0; i <= 3000; i++){
+			decisionMaking();
+			_delay_ms(1);
+		}
+		while (1) {
+			decisionMaking();
+			MotorL(FORWARD(200));
+			MotorR(FORWARD(200));
+		}
+		break;
+		case 0x08: //Frente + Busca lenta alternada
 		MotorL(FORWARD(200));
 		MotorR(FORWARD(200));
-		
-#ifdef debug
-		_delay_ms(1000);
-#endif
+		while(1){
+			uint8_t left = 1;
+			for(int i = 0; i <=500; i++){
+				decisionMaking();
+				MotorL(FORWARD(180 + left ? 20 : 0));
+				MotorR(FORWARD(200 - left ? 20 : 0));
+				_delay_ms(1);
+				if(i == 500) left = !left;
+			}
+		}
+		break;
+		case 0x09: //Curva direita fechada + Busca lenta alternada
+		for(int i = 0; i <=1000; i++){
+			MotorL(FORWARD(127));
+			MotorR(FORWARD(70));
+			decisionMaking();
+			_delay_ms(1);
+		}
+		while(1){
+			uint8_t left = 1;
+			for(int i = 0; i <=500; i++){
+				decisionMaking();
+				MotorL(FORWARD(180 + left ? 20 : 0));
+				MotorR(FORWARD(200 - left ? 20 : 0));
+				_delay_ms(1);
+				if(i == 500) left = !left;
+			}
+		}
+		break;
+		case 0x0A: //Curva direita aberta + Busca lenta alternada
+		for(int i = 0; i <=1000; i++){
+			MotorL(FORWARD(127));
+			MotorR(FORWARD(75));
+			decisionMaking();
+			_delay_ms(1);
+		}
+		while(1){
+			uint8_t left = 1;
+			for(int i = 0; i <=500; i++){
+				decisionMaking();
+				MotorL(FORWARD(180 + left ? 20 : 0));
+				MotorR(FORWARD(200 - left ? 20 : 0));
+				_delay_ms(1);
+				if(i == 500) left = !left;
+			}
+		}
+		break;
+		case 0x0B: //Curva esquerda fechada + Busca lenta alternada
+		for(int i = 0; i <=1000; i++){
+			MotorL(FORWARD(70));
+			MotorR(FORWARD(127));
+			decisionMaking();
+			_delay_ms(1);
+		}
+		while(1){
+			uint8_t left = 1;
+			for(int i = 0; i <=500; i++){
+				decisionMaking();
+				MotorL(FORWARD(180 + left ? 20 : 0));
+				MotorR(FORWARD(200 - left ? 20 : 0));
+				_delay_ms(1);
+				if(i == 500) left = !left;
+			}
+		}
+		break;
+		case 0x0C: //Curva esquerda aberta + Busca lenta alternada
+		for(int i = 0; i <=1000; i++){
+			MotorL(FORWARD(75));
+			MotorR(FORWARD(127));
+			decisionMaking();
+			_delay_ms(1);
+		}
+		while(1){
+			uint8_t left = 1;
+			for(int i = 0; i <=500; i++){
+				decisionMaking();
+				MotorL(FORWARD(180 + left ? 20 : 0));
+				MotorR(FORWARD(200 - left ? 20 : 0));
+				_delay_ms(1);
+				if(i == 500) left = !left;
+			}
+		}
+		break;
+		case 0x0D: //Desvio 45º Direito + Busca lenta alternada
+		MotorL(FORWARD(200));
+		MotorR(FORWARD(180));
+		decisionMaking();
+		while(1){
+			uint8_t left = 1;
+			for(int i = 0; i <=500; i++){
+				decisionMaking();
+				MotorL(FORWARD(180 + left ? 20 : 0));
+				MotorR(FORWARD(200 - left ? 20 : 0));
+				_delay_ms(1);
+				if(i == 500) left = !left;
+			}
+		}
+		break;
+		case 0x0E: //Desvio 45º Esquerdo + Busca lenta alternada
+		MotorL(FORWARD(180));
+		MotorR(FORWARD(200));
+		decisionMaking();
+		while(1){
+			uint8_t left = 1;
+			for(int i = 0; i <=500; i++){
+				decisionMaking();
+				MotorL(FORWARD(180 + left ? 20 : 0));
+				MotorR(FORWARD(200 - left ? 20 : 0));
+				_delay_ms(1);
+				if(i == 500) left = !left;
+			}
+		}
+		break;
+		case 0x0F: //Parado 3s + Busca até a linha
+		for(int i = 0; i <= 3000; i++){
+			decisionMaking();
+			_delay_ms(1);
+		}
+		while(1){
+			uint8_t left = 1;
+			for(int i = 0; i <=500; i++){
+				decisionMaking();
+				MotorL(FORWARD(180 + left ? 20 : 0));
+				MotorR(FORWARD(200 - left ? 20 : 0));
+				_delay_ms(1);
+				if(i == 500) left = !left;
+			}
+		}
+		break;
 	}
+	MotorL(STOP);
+	MotorR(STOP);
+	PORTB &= ~(1 << LED);
+}
+
+//RTDM()
+void decisionMaking(){
+	//DEFENSE
+	uint8_t lineSensor = lineCheck();
+	switch (lineSensor) {
+		case 0b01: //right detect
+		MotorL(BACKWARD(255));
+		MotorR(FORWARD(255));
+		_delay_ms(100);
+		break;
+		case 0b10:  //left detect
+		MotorL(FORWARD(255));
+		MotorR(BACKWARD(255));
+		_delay_ms(100);
+		break;
+		case 0b11: //frontal detect
+		MotorL(BACKWARD(255));
+		MotorR(BACKWARD(255));
+		_delay_ms(150);
+		MotorL(FORWARD(255));
+		MotorR(BACKWARD(255));
+		_delay_ms(200);
+		break;
+	}
+	//ATTACK
+	uint8_t distSensor;
+	do {
+		distSensor = distCheck();
+		switch (distSensor) {
+			case 0b01: //right detect
+			MotorL(FORWARD(200));
+			MotorR(BACKWARD(200));
+			break;
+			case 0b10: //left detect
+			MotorL(BACKWARD(200));
+			MotorR(FORWARD(200));
+			break;
+			case 0b11: //frontal detect
+			MotorL(FORWARD(255));
+			MotorR(FORWARD(255));
+			break;
+		}
+		#ifdef debug
+		_delay_ms(1000);
+		#endif
+	} while (distSensor);
+	
+	#ifdef debug
+	_delay_ms(1000);
+	#endif
 }
 
 uint8_t distCheck() {

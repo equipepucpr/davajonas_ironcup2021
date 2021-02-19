@@ -90,7 +90,7 @@ void setup() {
   while (digitalRead(microST) == LOW) {};
   digitalWrite(LED, HIGH);
 
-  int dip = readDIP();
+  int dip = 0;
   switch (dip) {
     case 0x0: //Frente + Busca até a linha -> A3
       while(true){
