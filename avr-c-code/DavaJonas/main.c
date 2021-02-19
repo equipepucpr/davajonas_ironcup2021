@@ -2,8 +2,13 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 
-#define debug
+//#define debug
+
+#ifdef debug
+#include <stdio.h>
+#endif
 
 //Line sensor threshold
 #define LINE_THRESHOLD 700
@@ -40,6 +45,8 @@
 #define distL PC2
 #define distR PC3
 
+#define readDist(x) (PINC & (1 << x))
+
 // Jsumo's micro-start
 #define microST PD2
 /*******PINOUT DEFINES - END*********/
@@ -49,6 +56,7 @@ void MotorL(uint8_t, uint8_t); // left motor / motor esquerdo / motor izquierdo
 void MotorR(uint8_t, uint8_t); // right motor / motor direito / motor derecho
 uint8_t readDIP(); // read DIP switch / ler chave DIP / leer el interruptor DIP
 uint8_t lineCheck();
+uint8_t distCheck();
 /*******FUNCTIONS - END*******/
 
 #ifdef debug
@@ -69,6 +77,17 @@ void sendArray(char array[]) {
 
 void(* resetSoftware)(void) = 0;
 
+ISR (INT0_vect) {
+#ifdef debug
+	log("Stopping...\n");
+#endif
+	MotorL(FORWARD(0));
+	MotorR(FORWARD(0));
+	PORTB &= ~(1 << LED);
+	resetSoftware();
+	while (1) {}; //It should never get here
+}
+
 int main(void)
 {
 	
@@ -82,20 +101,22 @@ int main(void)
 	
 	/****************PINOUT CONFIG****************/
 	// OUTPUTS
-	DDRD = (1 << LED) | (1 << leftMotor1) | (1 << pwmR) | (1 << rightMotor1) | (1 << rightMotor2);
-	DDRB = (1 << pwmL) | (1 << leftMotor2);
+	PORTD = 0;
+	DDRD = (1 << LED) | (1 << leftMotor1) | (1 << rightMotor1) | (1 << rightMotor2);
+	PORTB = 0;
+	DDRB = (1 << leftMotor2);
 	
 	//LEFT MOTOR PWM SETTING
 	TCCR1A = (1 << COM1A1) | (1 << WGM10);
-	//TCCR1B = (1 << WGM12) | (1 << CS11) | (1 << CS10);
-	TCCR1B = 0;
+	TCCR1B = (1 << WGM12) | (1 << CS11) | (1 << CS10);
 	
 	//RIGHT MOTOR PWM SETTING
 	TCCR2A = (1 << COM2B1) | (1 << WGM21) | (1 << WGM20);
-	//TCCR2B = (1 << CS22);
-	TCCR2B = 0;
+	TCCR2B = (1 << CS22);
 	
 	//ADC INIT
+	DDRC = 0;
+	PORTC = 0;
 	ADCSRA = (1 << ADPS0) | (1 << ADPS1) | (1 << ADPS2) | (1 << ADEN);
 	ADMUX = (1 << REFS0); //set ADC VRef to AVCC
 	
@@ -124,16 +145,71 @@ int main(void)
 	log("Starting...\n");
 		
 	//RTDM()
-	
-	while(1) {};
+	while(1) {
+		  //DEFENSE
+		  uint8_t lineSensor = lineCheck();
+		  switch (lineSensor) {
+			  case 0b01: //right detect
+				  MotorL(BACKWARD(255));
+				  MotorR(FORWARD(255));
+				  _delay_ms(100);
+				  break;
+			  case 0b10:  //left detect
+				  MotorL(FORWARD(255));
+				  MotorR(BACKWARD(255));
+				  _delay_ms(100);
+				  break;
+			  case 0b11: //frontal detect
+				  MotorL(BACKWARD(255));
+				  MotorR(BACKWARD(255));
+				  _delay_ms(150);
+				  MotorL(FORWARD(255));
+				  MotorR(BACKWARD(255));
+				  _delay_ms(200);
+				  break;
+		  }
+		  //ATTACK
+		  uint8_t distSensor;
+		  do {
+			  distSensor = distCheck();
+			  switch (distSensor) {
+				case 0b01: //right detect
+					MotorL(FORWARD(200));
+					MotorR(BACKWARD(200));
+					break;
+				case 0b10: //left detect
+				 	MotorL(BACKWARD(200));
+				 	MotorR(FORWARD(200));
+				 	break;
+				case 0b11: //frontal detect
+					MotorL(FORWARD(255));
+					MotorR(FORWARD(255));
+					break;
+			  }
+		  } while (distSensor);
+		MotorL(FORWARD(200));
+		MotorR(FORWARD(200));
+		
+#ifdef debug
+		_delay_ms(1000);
+#endif
+	}
 }
 
-ISR (INT0_vect) {
-	MotorL(FORWARD(0));
-	MotorR(FORWARD(0));
-	PORTB &= ~(1 << LED);
-	resetSoftware();
-	while(1) {}; //It should never get here
+uint8_t distCheck() {
+	uint8_t ret = 0;
+	if (readDist(distR))
+		ret |= 0b01;
+	if (readDist(distL))
+		ret |= 0b10;
+	
+#ifdef debug
+	char buf[50];
+	sprintf(buf, "distance sensor: %d\n", ret);
+	log(buf);
+#endif
+	
+	return ret;
 }
 
 uint8_t lineCheck() {
@@ -154,15 +230,20 @@ uint8_t lineCheck() {
 		ret |= 0b01;
 	if (sensor_l <= LINE_THRESHOLD)
 		ret |= 0b10;
-
+#ifdef debug
+	char buf[50];
+	sprintf(buf, "line sensor: %d\n", ret);
+	log(buf);
+#endif
 	return ret;
 }
 
 void setPWML(uint8_t pwm) {
-	if (pwm)
-		TCCR1B = (1 << WGM12) | (1 << CS11) | (1 << CS10);
-	else
-		TCCR1B = 0;
+	if (pwm) {
+		DDRB |= (1 << pwmL);
+	} else {
+		DDRB &= ~(1 << pwmL);
+	}
 	OCR1A = pwm;
 }
 
@@ -176,6 +257,13 @@ void MotorL(uint8_t pwm, uint8_t state){
 	// leftMotor1=0 and leftMotor2=1 -> moves forward / avanca / avanzar
 	// leftMotor1=1 and leftMotor2=0 -> moves back / recua / retrocede
 	// leftMotor1=1 and leftMotor2=1 -> stopped (braked) / parado (travado) / parado (frenado)
+#ifdef debug
+	char buf[50];
+	sprintf(buf, "left motor pwm: %d\n", pwm);
+	log(buf);
+	sprintf(buf, "left motor state: %d\n", state);
+	log(buf);
+#else
 	switch (state) {
 		case 0x00:
 			PORTD |= (1 << leftMotor1);
@@ -193,13 +281,15 @@ void MotorL(uint8_t pwm, uint8_t state){
 			PORTB |= (1 << leftMotor2);
 			break;
 	}
+#endif
 }
 
 void setPWMR(uint8_t pwm) {
-	if (pwm)
-		TCCR2B = (1 << CS22);
-	else
-		TCCR2B = 0;
+	if (pwm) {
+		DDRD |= (1 << pwmR);
+	} else {
+		DDRD &= ~(1 << pwmR);
+	}
 	OCR2B = pwm;
 }
 
@@ -213,6 +303,13 @@ void MotorR(uint8_t pwm, uint8_t state){
 	// leftMotor1=0 and leftMotor2=1 -> moves forward / avanca / avanzar
 	// leftMotor1=1 and leftMotor2=0 -> moves back / recua / retrocede
 	// leftMotor1=1 and leftMotor2=1 -> stopped (braked) / parado (travado) / parado (frenado)
+#ifdef debug
+	char buf[50];
+	sprintf(buf, "left motor pwm: %d\n", pwm);
+	log(buf);
+	sprintf(buf, "left motor state: %d\n", state);
+	log(buf);
+#else
 	switch (state) {
 		case 0x00:
 			PORTD |= (1 << rightMotor1);
@@ -230,6 +327,7 @@ void MotorR(uint8_t pwm, uint8_t state){
 			PORTD |= (1 << rightMotor2);
 			break;
 	}
+#endif
 }
 
 /** read DIP switch / ler chave DIP / leer el interruptor DIP **/
@@ -242,6 +340,12 @@ uint8_t readDIP(){
 	ret |= (PINB & (1 << DIP2)) << 2;
 	ret |= (PINB & (1 << DIP3)) << 1;
 	ret |= PINB & (1 << DIP4);
+	
+#ifdef debug
+	char buf[50];
+	sprintf(buf, "dip switch: %d\n", ret);
+	log(buf);
+#endif
 
 	return ret;
 }
