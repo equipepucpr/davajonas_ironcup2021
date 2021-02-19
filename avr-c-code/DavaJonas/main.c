@@ -1,4 +1,7 @@
+#define F_CPU 16000000UL
+#define BAUD 9600
 #include <avr/io.h>
+#include <util/setbaud.h>
 
 #define LINE_THRESHOLD 700
 
@@ -39,6 +42,8 @@ void MotorR(int pwm); // right motor / motor direito / motor derecho
 uint8_t readDIP(); // read DIP switch / ler chave DIP / leer el interruptor DIP
 /*******FUNCTIONS - END*******/
 
+void(* resetSoftware)(void) = 0;
+
 int main(void)
 {
 	/****************PINOUT CONFIG****************/
@@ -54,9 +59,15 @@ int main(void)
 	TCCR2A = (1 << COM2B1) | (1 << WGM21) | (1 << WGM20);
 	TCCR2B = (1 << CS22);
 	
+	//ADC INIT
+	ADCSRA = (1 << ADPS0) | (1 << ADPS1) | (1 << ADPS2) | (1 << ADEN);
+	ADMUX = (1 << REFS0); //set ADC VRef to AVCC
+	
 	// INPUTS: DO NOT CHANGE / NAO MUDAR / NO CAMBIAR
 	// DIP switch
-	PORTB = ((1 << DIP1) | (1 << DIP2) | (1 << DIP3) | (1 << DIP4)); //setting internal pullups
+	DDRB |= PB3;
+	PORTB = 0;
+	//PORTB = ((1 << DIP1) | (1 << DIP2) | (1 << DIP3) | (1 << DIP4)); //setting internal pullups
 	/****************PINOUT CONFIG - END***************/
 	
 	/***************INITIAL CONDITIONS*****************/
@@ -64,11 +75,21 @@ int main(void)
 	MotorL(0); // left motor stopped / motor esquerdo parado / motor izquierdo parado
 	MotorR(0); // right motor stopped / motor direito parado / motor derecho parado
 	/*************INITIAL CONDITIONS - END*************/
-    /* Replace with your application code */
-	OCR1A = 0x7F;
-	OCR2B = 0x7F;
+	
+	int ledOn = 0;
     while (1) 
     {
+		ADCSRA |= (1 << ADSC);
+		while (!(ADCSRA & (1 << ADIF))) {};
+		if(ADC > 102 && ADC < 153){
+			if(!ledOn){
+				PORTB |= 1 << PB3;
+				ledOn = 1;
+			} else {
+			PORTB &= ~(1 << PB3);
+			ledOn = 0;
+			}
+		}
     }
 }
 
@@ -82,8 +103,16 @@ void interrupt() {
 
 uint8_t lineCheck() {
 	uint16_t sensor_r, sensor_l;
-	//sensor_r = analogRead(lineR); TODO
-	//sensor_l = analogRead(lineL); TODO
+	
+	ADMUX &= ~(1 << MUX3) && ~(1 << MUX2) && ~(1 << MUX1) && ~(1 << MUX0);
+	ADCSRA |= (1 << ADSC);
+	while (!(ADCSRA & (1 << ADIF))) {};
+	sensor_l = ADC;
+	
+	ADMUX |= (1 << MUX0);
+	ADCSRA |= (1 << ADSC);
+	while (!(ADCSRA & (1 << ADIF))) {};
+	sensor_r = ADC;
 
 	uint8_t ret = 0;
 	if (sensor_r <= LINE_THRESHOLD)
@@ -156,5 +185,5 @@ void MotorR(int pwm){
 // retorna um valor entre 0 e 15
 // devuelve un valor entre 0 y 15
 uint8_t readDIP(){
-	return (PINB & ((1 << DIP1) | (1 << DIP2) | (1 << DIP3) | (1 << DIP4))) >> DIP1;
+	return ((PINB & (1 << DIP1)) << 3) | ((PINB & (1 << DIP2)) << 2) | ((PINB & (1 << DIP3)) << 1) | (PINB & (1 << DIP4));
 }
