@@ -106,6 +106,9 @@ int main(void)
 	PORTB = 0;
 	DDRB = (1 << leftMotor2);
 	
+	//DIP INPUT PULLUP
+	DDRB |= (1 << DIP1) | (1 << DIP2) | (1 << DIP3) | (1 << DIP4);
+	
 	//LEFT MOTOR PWM SETTING
 	TCCR1A = (1 << COM1A1) | (1 << WGM10);
 	TCCR1B = (1 << WGM12) | (1 << CS11) | (1 << CS10);
@@ -143,6 +146,7 @@ int main(void)
 	while (!(PIND & (1 << microST))) {};
 		
 	log("Starting...\n");
+	uint8_t dip = readDIP();
 		
 	//RTDM()
 	while(1) {
@@ -186,6 +190,9 @@ int main(void)
 					MotorR(FORWARD(255));
 					break;
 			  }
+#ifdef debug
+			  _delay_ms(1000);
+#endif
 		  } while (distSensor);
 		MotorL(FORWARD(200));
 		MotorR(FORWARD(200));
@@ -336,10 +343,14 @@ void MotorR(uint8_t pwm, uint8_t state){
 // devuelve un valor entre 0 y 15
 uint8_t readDIP(){
 	uint8_t ret = 0;
-	ret |= (PINB & (1 << DIP1)) << 3;
-	ret |= (PINB & (1 << DIP2)) << 2;
-	ret |= (PINB & (1 << DIP3)) << 1;
-	ret |= PINB & (1 << DIP4);
+	if (PINB & (1 << DIP1))
+		ret |= 0b1000;
+	if (PINB & (1 << DIP2))
+		ret |= 0b0100;
+	if (PINB & (1 << DIP3))
+		ret |= 0b0010;
+	if (PINB & (1 << DIP4))
+		ret |= 0b0001;
 	
 #ifdef debug
 	char buf[50];
