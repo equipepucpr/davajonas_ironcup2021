@@ -60,8 +60,12 @@ void __cxa_guard_abort (__guard *) {};
 
 //RTDM Start States
 #define END 0
-#define CHECKALL 1
-#define CHECKLINE 2
+#define NOCHECK 1
+#define CHECKALL 2
+#define CHECKLINE 3
+#define CHECKDIST 4
+
+#define BREAKIF(x) (x | 0b1000)
 
 /*******PINOUT DEFINES - END*********/
 
@@ -200,19 +204,27 @@ void RTDM() {
 	while (startState) {
 		startState = CSL(); //Configurable Start Logic
 		
-		//Check line sensors
-		uint8_t lineSensor = lineCheck();
-		if (lineSensor) { //If any sensor is triggered
-			FDL(lineSensor); //Fixed Defense Logic
-			continue; //Skip everything else
-		}
+		if ((startState & 0b0111) > NOCHECK) {
+			if ((startState & 0b0111) != CHECKDIST) {
+				//Check line sensors
+				uint8_t lineSensor = lineCheck();
+				if (lineSensor) { //If any sensor is triggered
+					FDL(lineSensor); //Fixed Defense Logic
+					if (startState & 0b1000)
+						break;
+					continue; //Skip everything else
+				}
+			}
 		
-		if (startState == CHECKALL)	{
-			//Check distance sensors
-			uint8_t distSensor = distCheck();
-			if (distSensor) { //If any sensor is triggered
-				FAL(distSensor); //Fixed Attack Logic
-				continue; //Skip everything else
+			if ((startState & 0b0111) != CHECKLINE)	{
+				//Check distance sensors
+				uint8_t distSensor = distCheck();
+				if (distSensor) { //If any sensor is triggered
+					FAL(distSensor); //Fixed Attack Logic
+					if (startState & 0b1000)
+						break;
+					continue; //Skip everything else
+				}
 			}
 		}
 		#ifdef debug
@@ -249,10 +261,10 @@ void RTDM() {
 uint8_t CSL() {
 	//TODO> Add all start logics
 	static uint16_t start = millis;
-	MotorL(BACKWARD(60));
-	MotorR(FORWARD(60));
+	MotorL(BACKWARD(127));
+	MotorR(FORWARD(127));
 	if (millis - start <= 2000)
-		return CHECKLINE;
+		return BREAKIF(CHECKDIST);
 	
 	return END;
 }
@@ -260,8 +272,8 @@ uint8_t CSL() {
 //CANNOT BE BLOCKING (EX: DON'T USE SLEEP)!
 void CPL() {
 	//TODO: Add all patrol logics
-	MotorL(FORWARD(60));
-	MotorR(FORWARD(60));
+	MotorL(FORWARD(127));
+	MotorR(FORWARD(127));
 }
 
 void FDL(uint8_t sensors) {
