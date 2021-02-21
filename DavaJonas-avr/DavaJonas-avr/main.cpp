@@ -12,11 +12,15 @@ void __cxa_guard_abort (__guard *) {};
 #include <util/delay.h>
 
 //#define debug
-#define DIP_VAL 0b0000
+//#define DIP_VAL 0b0000
 
 #ifdef debug
 #include <stdio.h>
 #endif
+
+//Motor Rotate Compensation
+#define PERCENT 1.0F
+#define ROT_DELAY(x) ((uint8_t) x * (PERCENT * 310.0F/180.0F))
 
 //Line sensor threshold
 #define LINE_THRESHOLD 700
@@ -25,7 +29,8 @@ void __cxa_guard_abort (__guard *) {};
 #define LED PD6
 
 // MOTORS
-#define STOP 0, 2
+#define STOP 0, 3
+#define FREEWHEEL 0, 2
 #define FORWARD(x) x, 1
 #define BACKWARD(x) x, 0
 
@@ -86,7 +91,7 @@ uint8_t dip = 0;
 
 #ifdef debug
 #define UART_PRESCALER 8 //115200
-void sendArray(char array[]) {
+void sendArray(const char array[]) {
 	uint8_t i = 0;
 	while (array[i]) {
 		while (!( UCSR0A & (1<<UDRE0))) {}; /* Wait for empty transmit buffer*/
@@ -102,7 +107,7 @@ void sendArray(char array[]) {
 
 void(* resetSoftware)(void) = 0;
 
-volatile uint16_t millis;
+volatile uint32_t millis;
 
 ISR (TIMER0_COMPA_vect){
 	millis++;
@@ -112,8 +117,8 @@ ISR (INT0_vect) {
 	#ifdef debug
 	log("Stopping...\n");
 	#endif
-	MotorL(FORWARD(0));
-	MotorR(FORWARD(0));
+	MotorL(FREEWHEEL);
+	MotorR(FREEWHEEL);
 	PORTB &= ~(1 << LED);
 	resetSoftware();
 	while (1) {}; //It should never get here
@@ -175,8 +180,8 @@ int main(void)
 	
 	/***************INITIAL CONDITIONS*****************/
 	PORTB &= ~(1 << LED); // LED off / LED desligado / LED apagado
-	MotorL(FORWARD(0)); // left motor stopped / motor esquerdo parado / motor izquierdo parado
-	MotorR(FORWARD(0)); // right motor stopped / motor direito parado / motor derecho parado
+	MotorL(FREEWHEEL); // left motor stopped / motor esquerdo parado / motor izquierdo parado
+	MotorR(FREEWHEEL); // right motor stopped / motor direito parado / motor derecho parado
 	/*************INITIAL CONDITIONS - END*************/
 
 	//Enable interrupts
@@ -260,13 +265,16 @@ void RTDM() {
 //CANNOT BE BLOCKING (EX: DON'T USE SLEEP)!
 uint8_t CSL() {
 	//TODO> Add all start logics
-	static uint16_t start = millis;
-	MotorL(BACKWARD(127));
-	MotorR(FORWARD(127));
-	if (millis - start <= 2000)
-		return BREAKIF(CHECKDIST);
+	static uint32_t start = millis;
+	if (millis - start <= ROT_DELAY(90)) {
+		MotorL(BACKWARD(255));
+		MotorR(FORWARD(255));
+		return NOCHECK;
+	}
 	
-	return END;
+	MotorL(STOP);
+	MotorR(STOP);
+	return NOCHECK;
 }
 
 //CANNOT BE BLOCKING (EX: DON'T USE SLEEP)!
@@ -277,17 +285,22 @@ void CPL() {
 }
 
 void FDL(uint8_t sensors) {
-	//TODO: change this to something more elegant (Ex: rotate until sensor returns false)
 	switch (sensors) {
 		case 0b01: //right detect
 		MotorL(BACKWARD(255));
 		MotorR(FORWARD(255));
-		_delay_ms(120);
+		_delay_ms(ROT_DELAY(90));
+		MotorL(STOP);
+		MotorR(STOP);
+		_delay_ms(10);
 		break;
 		case 0b10:  //left detect
 		MotorL(FORWARD(255));
 		MotorR(BACKWARD(255));
-		_delay_ms(120);
+		_delay_ms(ROT_DELAY(90));
+		MotorL(STOP);
+		MotorR(STOP);
+		_delay_ms(10);
 		break;
 		case 0b11: //frontal detect
 		MotorL(BACKWARD(255));
@@ -295,7 +308,10 @@ void FDL(uint8_t sensors) {
 		_delay_ms(150);
 		MotorL(FORWARD(255));
 		MotorR(BACKWARD(255));
-		_delay_ms(200);
+		_delay_ms(ROT_DELAY(180));
+		MotorL(STOP);
+		MotorR(STOP);
+		_delay_ms(10);
 		break;
 	}
 }
@@ -401,7 +417,12 @@ void MotorL(uint8_t pwm, uint8_t state){
 		break;
 		case 0x02:
 		setPWML(0);
-		PORTD |= ~(1 << leftMotor1);
+		PORTD &= ~(1 << leftMotor1);
+		PORTB &= ~(1 << leftMotor2);
+		break;
+		case 0x03:
+		setPWML(0);
+		PORTD |= (1 << leftMotor1);
 		PORTB |= (1 << leftMotor2);
 		break;
 	}
@@ -447,7 +468,12 @@ void MotorR(uint8_t pwm, uint8_t state){
 		break;
 		case 0x02:
 		setPWMR(0);
-		PORTD |= ~(1 << rightMotor1);
+		PORTD &= ~(1 << rightMotor1);
+		PORTD &= ~(1 << rightMotor2);
+		break;
+		case 0x03:
+		setPWMR(0);
+		PORTD |= (1 << rightMotor1);
 		PORTD |= (1 << rightMotor2);
 		break;
 	}
