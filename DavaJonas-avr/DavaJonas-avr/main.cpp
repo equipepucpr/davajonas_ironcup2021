@@ -12,7 +12,7 @@ void __cxa_guard_abort (__guard *) {};
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
-//debug -> Print motor/sensor values on serial
+//debug -> Print motor/sensor values on serial (motors disabled)
 //#define debug
 
 //DIP_VAL -> set a constant dip value (it then ignores the dip switch)
@@ -75,7 +75,7 @@ void __cxa_guard_abort (__guard *) {};
 #define CHECKLINE 3 //Run start logic loop checking line sensors
 #define CHECKDIST 4 //Run start logic loop checking presence sensors
 
-#define BREAKIF(x) (x | 0b1000) //Break start logic loop if sensor is triggered - Ex: BREAKIF(CHECKLINE) -> break start logic loop if line is detected
+#define ENDIF(x) (x | 0b1000) //Break start logic loop if sensor is triggered - Ex: ENDIF(CHECKLINE) -> break start logic loop if line is detected
 
 /*******FUNCTIONS*******/
 void MotorL(uint8_t, uint8_t); // left motor / motor esquerdo / motor izquierdo
@@ -163,7 +163,7 @@ int main(void)
 	DDRB = (1 << leftMotor2);
 	
 	//DIP INPUT PULLUP
-	DDRB |= (1 << DIP1) | (1 << DIP2) | (1 << DIP3) | (1 << DIP4);
+	PORTB |= (1 << DIP1) | (1 << DIP2) | (1 << DIP3) | (1 << DIP4);
 	
 	//LEFT MOTOR PWM SETTING
 	TCCR1A = (1 << COM1A1) | (1 << WGM10);
@@ -231,7 +231,7 @@ void RTDM() {
 				uint8_t lineSensor = lineCheck();
 				if (lineSensor) { //If any sensor is triggered
 					FDL(lineSensor); //Fixed Defense Logic
-					if (startState & 0b1000) //BREAKIF
+					if (startState & 0b1000) //ENDIF
 						break;
 					continue; //Skip everything else
 				}
@@ -242,7 +242,7 @@ void RTDM() {
 				uint8_t distSensor = distCheck();
 				if (distSensor) { //If any sensor is triggered
 					FAL(distSensor); //Fixed Attack Logic
-					if (startState & 0b1000) //BREAKIF
+					if (startState & 0b1000) //ENDIF
 						break;
 					continue; //Skip everything else
 				}
@@ -282,25 +282,73 @@ void RTDM() {
 //Configurable Start Logic
 //CANNOT BE BLOCKING (EX: DON'T USE SLEEP)!
 uint8_t CSL() {
-	//TODO> Add all start logics
 	static uint32_t start = millis;
-	if (millis - start <= ROT_DELAY(90)) {
-		MotorL(BACKWARD(255));
-		MotorR(FORWARD(255));
-		return NOCHECK;
+	
+	//Check the two msb
+	switch ((dip & 0b1100) >> 2) {
+		case 0x0: //GO FORWARD (A3/B3)
+			if (millis - start < 400) {
+				MotorL(FORWARD(255));
+				MotorR(FORWARD(255));
+				return ENDIF(CHECKALL);
+			}
+			return END;
+			
+		case 0x1: //Omae Wa Mou Shindeiru left (A1)
+			break;
+			
+		case 0x2: //Omae Wa Mou Shindeiru Right (A5)
+			break;
+			
+		case 0x3: //Wait for enemy (check front, left and right)
+			break;
 	}
 	
-	MotorL(STOP);
-	MotorR(STOP);
-	return NOCHECK;
+	return END;
 }
 
 //Configurable Patrol Logic
 //CANNOT BE BLOCKING (EX: DON'T USE SLEEP)!
 void CPL() {
-	//TODO: Add all patrol logics
-	MotorL(FORWARD(127));
-	MotorR(FORWARD(127));
+	static uint32_t start = millis;
+	
+	//Check the two lsb
+	switch (dip & 0b0011) {
+		case 0x0: //GO FORWARD 200
+			MotorL(FORWARD(200));
+			MotorR(FORWARD(200));
+			break;
+			
+		case 0x1: //ZigZag
+			if (millis - start < ROT_DELAY(45)) {
+				MotorL(BACKWARD(255));
+				MotorR(FORWARD(255));
+				return;
+			}
+			if (millis - start < ROT_DELAY(45) + 200) {
+				MotorL(FORWARD(200));
+				MotorR(FORWARD(200));
+				return;
+			}
+			if (millis - start < 2*ROT_DELAY(45) + 200) {
+				MotorL(FORWARD(255));
+				MotorR(BACKWARD(255));
+				return;
+			}
+			if (millis - start < 2*ROT_DELAY(45) + 2*200) {
+				MotorL(FORWARD(200));
+				MotorR(FORWARD(200));
+				return;
+			}
+			start = millis;
+			break;
+			
+		case 0x2: //Woodpecker
+			break;
+			
+		case 0x3: //Tornado
+			break;
+	}
 }
 
 //Fixed Defense Logic
@@ -310,17 +358,11 @@ void FDL(uint8_t sensors) {
 		MotorL(BACKWARD(255));
 		MotorR(FORWARD(255));
 		_delay_ms(ROT_DELAY(90));
-		MotorL(STOP);
-		MotorR(STOP);
-		_delay_ms(10);
 		break;
 		case 0b10:  //left detect
 		MotorL(FORWARD(255));
 		MotorR(BACKWARD(255));
 		_delay_ms(ROT_DELAY(90));
-		MotorL(STOP);
-		MotorR(STOP);
-		_delay_ms(10);
 		break;
 		case 0b11: //frontal detect
 		MotorL(BACKWARD(255));
@@ -329,9 +371,6 @@ void FDL(uint8_t sensors) {
 		MotorL(FORWARD(255));
 		MotorR(BACKWARD(255));
 		_delay_ms(ROT_DELAY(180));
-		MotorL(STOP);
-		MotorR(STOP);
-		_delay_ms(10);
 		break;
 	}
 }
@@ -474,9 +513,9 @@ void MotorR(uint8_t pwm, uint8_t state){
 	// leftMotor1=1 and leftMotor2=1 -> stopped (braked) / parado (travado) / parado (frenado)
 	#ifdef debug
 	char buf[50];
-	sprintf(buf, "left motor pwm: %d\n", pwm);
+	sprintf(buf, "right motor pwm: %d\n", pwm);
 	log(buf);
-	sprintf(buf, "left motor state: %d\n", state);
+	sprintf(buf, "right motor state: %d\n", state);
 	log(buf);
 	#else
 	switch (state) {
