@@ -292,7 +292,7 @@ uint8_t CSL() {
 				MotorR(FORWARD(255));
 				return ENDIF(CHECKALL);
 			}
-			return END;
+			return END; 
 			
 		case 0x1: //Omae Wa Mou Shindeiru left (A1)
 			break;
@@ -330,17 +330,17 @@ void CPL() {
 				MotorR(FORWARD(200));
 				return;
 			}
-			if (millis - start < 2*ROT_DELAY(45) + 200) {
+			if (millis - start < ROT_DELAY(90) + ROT_DELAY(45) + 200) {
 				MotorL(FORWARD(255));
 				MotorR(BACKWARD(255));
 				return;
 			}
-			if (millis - start < 2*ROT_DELAY(45) + 2*200) {
+			if (millis - start < ROT_DELAY(90) + ROT_DELAY(45) + 2*200) {
 				MotorL(FORWARD(200));
 				MotorR(FORWARD(200));
 				return;
 			}
-			if (millis - start < 3*ROT_DELAY(45) + 2*200) {
+			if (millis - start <  ROT_DELAY(90) + 2*ROT_DELAY(45) + 2*200) {
 				MotorL(BACKWARD(255));
 				MotorR(FORWARD(255));
 				return;
