@@ -340,6 +340,11 @@ void CPL() {
 				MotorR(FORWARD(200));
 				return;
 			}
+			if (millis - start < 3*ROT_DELAY(45) + 2*200) {
+				MotorL(BACKWARD(255));
+				MotorR(FORWARD(255));
+				return;
+			}
 			start = millis;
 			break;
 			
