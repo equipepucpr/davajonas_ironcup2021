@@ -295,12 +295,28 @@ uint8_t CSL() {
 			return END; 
 			
 		case 0x1: //Omae Wa Mou Shindeiru left (A1)
+			if (millis - start < 1500) {
+				MotorL(FORWARD(70));
+				MotorR(FORWARD(127));
+			}
+			return END;
 			break;
 			
 		case 0x2: //Omae Wa Mou Shindeiru Right (A5)
+			if (millis - start < 1500) {
+				MotorR(FORWARD(70));
+				MotorL(FORWARD(127));
+			}
+			return END;
 			break;
 			
 		case 0x3: //Wait for enemy (check front, left and right)
+			if (millis - start < 3000) {
+				MotorR(STOP);
+				MotorL(STOP);
+				return ENDIF(CHECKALL);
+			}
+			return END;
 			break;
 	}
 	
@@ -349,9 +365,47 @@ void CPL() {
 			break;
 			
 		case 0x2: //Woodpecker
+			if (millis - start < ROT_DELAY(45)) {
+				MotorL(BACKWARD(255));
+				MotorR(FORWARD(255));
+				return;
+			}
+			if (millis - start < ROT_DELAY(45) + 200) {
+				MotorL(FORWARD(200));
+				MotorR(FORWARD(200));
+				return;
+			}
+			if (millis - start < ROT_DELAY(45) + 500 + 200) {
+				MotorL(STOP);
+				MotorR(STOP);
+				return;
+			}
+			if (millis - start < ROT_DELAY(90) + ROT_DELAY(45) + 200 + 500) {
+				MotorL(FORWARD(255));
+				MotorR(BACKWARD(255));
+				return;
+			}
+			if (millis - start < ROT_DELAY(90) + ROT_DELAY(45) + 2*200 + 500) {
+				MotorL(FORWARD(200));
+				MotorR(FORWARD(200));
+				return;
+			}
+			if (millis - start < ROT_DELAY(90) + ROT_DELAY(45) + 3*200 + 2*500) {
+				MotorL(STOP);
+				MotorR(STOP);
+				return;
+			}
+			if (millis - start <  ROT_DELAY(90) + 2*ROT_DELAY(45) + 4*200 + 2*500) {
+				MotorL(BACKWARD(255));
+				MotorR(FORWARD(255));
+				return;
+			}
+			start = millis;
 			break;
 			
 		case 0x3: //Tornado
+			MotorL(BACKWARD(200));
+			MotorR(FORWARD(200));
 			break;
 	}
 }
