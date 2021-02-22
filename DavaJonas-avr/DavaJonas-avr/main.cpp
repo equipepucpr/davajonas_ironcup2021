@@ -1,98 +1,103 @@
 #define F_CPU 16000000UL
 
-//GCC 4+ needs theses functions for static variables
+//GCC 4+ needs these functions for non-constant static variable initialization
 __extension__ typedef int __guard __attribute__((mode (__DI__)));
 
 int __cxa_guard_acquire(__guard *g) {return !*(char *)(g);};
 void __cxa_guard_release (__guard *g) {*(char *)g = 1;};
 void __cxa_guard_abort (__guard *) {};
+//END of GCC 4+ functions
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
 
+//debug -> Print motor/sensor values on serial
 //#define debug
+
+//DIP_VAL -> set a constant dip value (it then ignores the dip switch)
 //#define DIP_VAL 0b0000
 
 #ifdef debug
-#include <stdio.h>
+#include <stdio.h> //Needed for sprintf
 #endif
 
-//Motor Rotate Compensation
+//Motor Rotate Compensation (Compensate the time needed to rotate X degrees)
 #define PERCENT 1.0F
 #define ROT_DELAY(x) ((uint8_t) x * (PERCENT * 310.0F/180.0F))
 
 //Line sensor threshold
-#define LINE_THRESHOLD 700
+#define LINE_THRESHOLD 700 //Analog threshold for Dohyo line detection
 
-// LED
+// LED Port
 #define LED PD6
 
 // MOTORS
-#define STOP 0, 3
-#define FREEWHEEL 0, 2
-#define FORWARD(x) x, 1
-#define BACKWARD(x) x, 0
+#define STOP 0, 3 //Stop and break wheel
+#define FREEWHEEL 0, 2 //Stop but don't brake
+#define FORWARD(x) x, 1 //Go forward with pwm of value X (0 to 255)
+#define BACKWARD(x) x, 0 //Go backward with pwm of value X (0 to 255)
 
-// left motor
+// left motor ports
 #define pwmL PB1
 #define leftMotor1 PD7
 #define leftMotor2 PB0
 
-// right motor
+// right motor ports
 #define pwmR PD3
 #define rightMotor1 PD5
 #define rightMotor2 PD4
 
-// DIP switch
+// DIP switch ports
 #define DIP1 PB2
 #define DIP2 PB3
 #define DIP3 PB4
 #define DIP4 PB5
 
-// Robocore's line sensor
+// Robocore's line sensor ports
 #define lineL PC0
 #define lineR PC1
 
-// Jsumo's distance sensor
+// Jsumo's presence sensor ports
 #define distL PC2
 #define distR PC3
 
-#define readDist(x) (PINC & (1 << x))
+#define readDist(x) (PINC & (1 << x)) //Digitally read the presence/distance sensor
 
-// Jsumo's micro-start
+// Jsumo's micro-start port
 #define microST PD2
+/*******PINOUT DEFINES - END*********/
 
 //RTDM Start States
-#define END 0
-#define NOCHECK 1
-#define CHECKALL 2
-#define CHECKLINE 3
-#define CHECKDIST 4
+#define END 0 //Exit start logic
+#define NOCHECK 1 //Run start logic loop without sensor checking
+#define CHECKALL 2 //Run start logic loop checking all sensors
+#define CHECKLINE 3 //Run start logic loop checking line sensors
+#define CHECKDIST 4 //Run start logic loop checking presence sensors
 
-#define BREAKIF(x) (x | 0b1000)
-
-/*******PINOUT DEFINES - END*********/
+#define BREAKIF(x) (x | 0b1000) //Break start logic loop if sensor is triggered - Ex: BREAKIF(CHECKLINE) -> break start logic loop if line is detected
 
 /*******FUNCTIONS*******/
 void MotorL(uint8_t, uint8_t); // left motor / motor esquerdo / motor izquierdo
 void MotorR(uint8_t, uint8_t); // right motor / motor direito / motor derecho
 uint8_t readDIP(); // read DIP switch / ler chave DIP / leer el interruptor DIP
-uint8_t lineCheck();
-uint8_t distCheck();
-void RTDM();
-uint8_t CSL();
-void FDL(uint8_t);
-void FAL(uint8_t);
-void CPL();
+uint8_t lineCheck(); //Read both line sensors
+uint8_t distCheck(); //Read both presence sensors
+void RTDM(); //Real Time Decision Making (main loop)
+uint8_t CSL(); //Customizable Start Logic
+void FDL(uint8_t); //Fixed Defense Logic
+void FAL(uint8_t); //Fixed Attack Logic
+void CPL(); //Customizable Patrol Logic
 /*******FUNCTIONS - END*******/
 
-uint8_t dip = 0;
+uint8_t dip = 0; //Initial DIP value
 
 #ifdef debug
-#define UART_PRESCALER 8 //115200
+#define UART_PRESCALER 8 //115200bps (3.5% error)
+//Send string over serial
 void sendArray(const char array[]) {
 	uint8_t i = 0;
+	//Go through all characters, one by one
 	while (array[i]) {
 		while (!( UCSR0A & (1<<UDRE0))) {}; /* Wait for empty transmit buffer*/
 		UDR0 = array[i];            /* Put data into buffer, sends the data */
@@ -100,19 +105,24 @@ void sendArray(const char array[]) {
 	};
 }
 
+//Disable log if debug isn't defined
 #define log(array) sendArray(array)
 #else
 #define log(array) /*sendArray(array)*/
 #endif
 
+//Reset function, points to address 0 of memory space (first assembly instruction)
 void(* resetSoftware)(void) = 0;
 
+//Milliseconds variable -> increased by timer0
 volatile uint32_t millis;
 
+//Timer0 interrupt -> used for millis
 ISR (TIMER0_COMPA_vect){
 	millis++;
 }
 
+//microST interrupt -> stop motors and restart mcu
 ISR (INT0_vect) {
 	#ifdef debug
 	log("Stopping...\n");
@@ -189,23 +199,29 @@ int main(void)
 	
 	log("Ready!\n");
 	
+	//While microST is low (0v) don't do anything
 	while (!(PIND & (1 << microST))) {};
 	log("Starting...\n");
 	
-	#ifdef DIP_VAL
-	dip = DIP_VAL;
+	//set DIP value
+#ifdef DIP_VAL
+dip = DIP_VAL;
 	#else
 	dip = readDIP();
-	#endif
-	
+#endif
+
+	//Main program loop -> It should never return to main
 	RTDM();
 	
 	while(1) {}; //It should never get here
 }
 
-//RTDM()
+//RTDM Real Time Decision Making
+//This function executes CSL, CPL, FDL and FAL if the conditions are met
 void RTDM() {
 	uint8_t startState = CHECKALL;
+	
+	//Start Logic Loop
 	while (startState) {
 		startState = CSL(); //Configurable Start Logic
 		
@@ -215,7 +231,7 @@ void RTDM() {
 				uint8_t lineSensor = lineCheck();
 				if (lineSensor) { //If any sensor is triggered
 					FDL(lineSensor); //Fixed Defense Logic
-					if (startState & 0b1000)
+					if (startState & 0b1000) //BREAKIF
 						break;
 					continue; //Skip everything else
 				}
@@ -226,7 +242,7 @@ void RTDM() {
 				uint8_t distSensor = distCheck();
 				if (distSensor) { //If any sensor is triggered
 					FAL(distSensor); //Fixed Attack Logic
-					if (startState & 0b1000)
+					if (startState & 0b1000) //BREAKIF
 						break;
 					continue; //Skip everything else
 				}
@@ -238,6 +254,7 @@ void RTDM() {
 		#endif
 	}
 	
+	//Patrol Logic Loop
 	while (1) {
 		//Check line sensors
 		uint8_t lineSensor = lineCheck();
@@ -262,6 +279,7 @@ void RTDM() {
 	}
 }
 
+//Configurable Start Logic
 //CANNOT BE BLOCKING (EX: DON'T USE SLEEP)!
 uint8_t CSL() {
 	//TODO> Add all start logics
@@ -277,6 +295,7 @@ uint8_t CSL() {
 	return NOCHECK;
 }
 
+//Configurable Patrol Logic
 //CANNOT BE BLOCKING (EX: DON'T USE SLEEP)!
 void CPL() {
 	//TODO: Add all patrol logics
@@ -284,6 +303,7 @@ void CPL() {
 	MotorR(FORWARD(127));
 }
 
+//Fixed Defense Logic
 void FDL(uint8_t sensors) {
 	switch (sensors) {
 		case 0b01: //right detect
@@ -316,6 +336,7 @@ void FDL(uint8_t sensors) {
 	}
 }
 
+//Fixed Attack Logic
 void FAL(uint8_t sensors) {
 	do {
 		switch (sensors) {
@@ -336,18 +357,19 @@ void FAL(uint8_t sensors) {
 	} while (sensors);
 }
 
+//Check distance/presence sensors
 uint8_t distCheck() {
 	uint8_t ret = 0;
 	if (readDist(distR))
-	ret |= 0b01;
+		ret |= 0b01; //set bit 0 if right sensor found something
 	if (readDist(distL))
-	ret |= 0b10;
+		ret |= 0b10; //set bit 1 if left sensor found something
 	
-	#ifdef debug
+#ifdef debug
 	char buf[50];
 	sprintf(buf, "distance sensor: %d\n", ret);
 	log(buf);
-	#endif
+#endif
 	
 	return ret;
 }
@@ -355,36 +377,38 @@ uint8_t distCheck() {
 uint8_t lineCheck() {
 	uint16_t sensor_r, sensor_l;
 	
-	ADMUX &= ~(1 << MUX3 | 1 << MUX2  | 1 << MUX1 | 1 << MUX0);
-	ADCSRA |= (1 << ADSC);
-	while (!(ADCSRA & (1 << ADIF))) {};
-	sensor_l = ADC;
+	ADMUX &= ~(1 << MUX3 | 1 << MUX2  | 1 << MUX1 | 1 << MUX0); //Set ADMUX to left sensor port
+	ADCSRA |= (1 << ADSC); //Start analog reading
+	while (!(ADCSRA & (1 << ADIF))) {}; //Wait for analog result
+	sensor_l = ADC; //Sensor sensor_l value
 	
-	ADMUX |= (1 << MUX0);
-	ADCSRA |= (1 << ADSC);
-	while (!(ADCSRA & (1 << ADIF))) {};
-	sensor_r = ADC;
+	ADMUX |= (1 << MUX0); //Set ADMUX to right sensor port
+	ADCSRA |= (1 << ADSC); //Start analog reading
+	while (!(ADCSRA & (1 << ADIF))) {}; //Wait for analog result
+	sensor_r = ADC; //Sensor sensor_l value
 
 	uint8_t ret = 0;
 	if (sensor_r <= LINE_THRESHOLD)
-	ret |= 0b01;
+		ret |= 0b01; //set bit 0 if right sensor found line
 	if (sensor_l <= LINE_THRESHOLD)
-	ret |= 0b10;
-	#ifdef debug
+		ret |= 0b10; //set bit 1 if left sensor found line
+		
+#ifdef debug
 	char buf[50];
 	sprintf(buf, "line sensor: %d\n", ret);
 	log(buf);
-	#endif
+#endif
+
 	return ret;
 }
 
 void setPWML(uint8_t pwm) {
-	if (pwm) {
+	if (pwm) { //Disable port if pwm equals 0
 		DDRB |= (1 << pwmL);
 		} else {
 		DDRB &= ~(1 << pwmL);
 	}
-	OCR1A = pwm;
+	OCR1A = pwm; //Set pwm value
 }
 
 /**LEFT MOTOR CONTROL / CONTROLE DO MOTOR ESQUERDO / CONTROL DEL MOTOR IZQUIERDO**/
