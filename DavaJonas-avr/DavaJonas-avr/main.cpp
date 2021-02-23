@@ -35,8 +35,8 @@ void __cxa_guard_abort (__guard *) {};
 #define OMAE_PROP 1.45F
 #define OMAE_MAX 255
 #define OMAE_MIN ((uint8_t) OMAE_MAX / OMAE_PROP)
-#define OMAE_TIME 1500
-#define OMAE_BLIND ((uint8_t) OMAE_TIME / 1.5F)
+#define OMAE_TIME 750
+#define OMAE_BLIND ((uint8_t) OMAE_TIME * 0.75F)
 
 //Line sensor threshold
 #define LINE_THRESHOLD 700 //Analog threshold for Dohyo line detection
