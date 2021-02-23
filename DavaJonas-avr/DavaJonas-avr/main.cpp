@@ -18,6 +18,9 @@ void __cxa_guard_abort (__guard *) {};
 //DIP_VAL -> set a constant dip value (it then ignores the dip switch)
 //#define DIP_VAL 0b0000
 
+//#define disableAttack
+//#define disableDefense
+
 #ifdef debug
 #include <stdio.h> //Needed for sprintf
 #endif
@@ -294,30 +297,85 @@ uint8_t CSL() {
 			}
 			return END; 
 			
-		case 0x1: //Omae Wa Mou Shindeiru left (A1)
+		case 0x1: //Omae Wa Mou Shindeiru left (A5)
+			if (millis - start < 1000) {
+				MotorL(FORWARD(70));
+				MotorR(FORWARD(127));
+				return NOCHECK;
+			}
 			if (millis - start < 1500) {
 				MotorL(FORWARD(70));
 				MotorR(FORWARD(127));
+				return ENDIF(CHECKDIST);
+			}
+			if (millis - start < 1500 + ROT_DELAY(90)) {
+				MotorR(FORWARD(255));
+				MotorL(BACKWARD(255));
+				return ENDIF(CHECKDIST);
 			}
 			return END;
-			break;
 			
-		case 0x2: //Omae Wa Mou Shindeiru Right (A5)
+		case 0x2: //Omae Wa Mou Shindeiru Right (A1)
+			if (millis - start < 1000) {
+				MotorR(FORWARD(70));
+				MotorL(FORWARD(127));
+				return NOCHECK;
+			}
 			if (millis - start < 1500) {
 				MotorR(FORWARD(70));
 				MotorL(FORWARD(127));
+				return ENDIF(CHECKDIST);
+			}
+			if (millis - start < 1500 + ROT_DELAY(90)) {
+				MotorL(FORWARD(255));
+				MotorR(BACKWARD(255));
+				return ENDIF(CHECKDIST);
 			}
 			return END;
-			break;
 			
-		case 0x3: //Wait for enemy (check front, left and right)
-			if (millis - start < 3000) {
+		case 0x3: //Wait for enemy (check front, left and right) (A3)
+			if (millis - start < ROT_DELAY(45)) {
+				MotorR(FORWARD(255));
+				MotorL(BACKWARD(255));
+				return ENDIF(CHECKALL);
+			}
+			if (millis - start < ROT_DELAY(45) + 200) {
 				MotorR(STOP);
 				MotorL(STOP);
 				return ENDIF(CHECKALL);
 			}
-			return END;
-			break;
+			if (millis - start < 2*ROT_DELAY(45) + 200) {
+				MotorR(BACKWARD(255));
+				MotorL(FORWARD(255));
+				return ENDIF(CHECKALL);
+			}
+			if (millis - start < 2*ROT_DELAY(45) + 400) {
+				MotorR(STOP);
+				MotorL(STOP);
+				return ENDIF(CHECKALL);
+			}
+			if (millis - start < 3*ROT_DELAY(45) + 400) {
+				MotorR(BACKWARD(255));
+				MotorL(FORWARD(255));
+				return ENDIF(CHECKALL);
+			}
+			if (millis - start < 3*ROT_DELAY(45) + 600) {
+				MotorR(STOP);
+				MotorL(STOP);
+				return ENDIF(CHECKALL);
+			}
+			if (millis - start < 4*ROT_DELAY(45) + 600) {
+				MotorR(FORWARD(255));
+				MotorL(BACKWARD(255));
+				return ENDIF(CHECKALL);
+			}
+			if (millis - start < 4*ROT_DELAY(45) + 800) {
+				MotorR(STOP);
+				MotorL(STOP);
+				return ENDIF(CHECKALL);
+			}
+			start = millis;
+			return ENDIF(CHECKALL);
 	}
 	
 	return END;
@@ -383,7 +441,7 @@ void CPL() {
 			if (millis - start < ROT_DELAY(90) + ROT_DELAY(45) + 200 + 500) {
 				MotorL(FORWARD(255));
 				MotorR(BACKWARD(255));
-				return;
+				return; 
 			}
 			if (millis - start < ROT_DELAY(90) + ROT_DELAY(45) + 2*200 + 500) {
 				MotorL(FORWARD(200));
@@ -457,6 +515,9 @@ void FAL(uint8_t sensors) {
 
 //Check distance/presence sensors
 uint8_t distCheck() {
+#ifdef disableAttack
+	return 0;
+#else
 	uint8_t ret = 0;
 	if (readDist(distR))
 		ret |= 0b01; //set bit 0 if right sensor found something
@@ -470,9 +531,13 @@ uint8_t distCheck() {
 #endif
 	
 	return ret;
+#endif
 }
 
 uint8_t lineCheck() {
+#ifdef disableDefense
+	return 0;
+#else
 	uint16_t sensor_r, sensor_l;
 	
 	ADMUX &= ~(1 << MUX3 | 1 << MUX2  | 1 << MUX1 | 1 << MUX0); //Set ADMUX to left sensor port
@@ -498,6 +563,7 @@ uint8_t lineCheck() {
 #endif
 
 	return ret;
+#endif
 }
 
 void setPWML(uint8_t pwm) {
