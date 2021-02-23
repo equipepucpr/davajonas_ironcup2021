@@ -27,7 +27,9 @@ void __cxa_guard_abort (__guard *) {};
 
 //Motor Rotate Compensation (Compensate the time needed to rotate X degrees)
 #define PERCENT 1.0F
-#define ROT_DELAY(x) ((uint8_t) x * (PERCENT * 310.0F/180.0F))
+#define ROT_DELAY(x) ((uint8_t) x * (PERCENT * 395.0F/180.0F))
+#define ROT_LEFT  MotorR(FORWARD(200)); MotorL(BACKWARD(200));
+#define ROT_RIGHT MotorR(BACKWARD(200)); MotorL(FORWARD(200));
 
 //Line sensor threshold
 #define LINE_THRESHOLD 700 //Analog threshold for Dohyo line detection
@@ -291,52 +293,49 @@ uint8_t CSL() {
 	switch ((dip & 0b1100) >> 2) {
 		case 0x0: //GO FORWARD (A3/B3)
 			if (millis - start < 400) {
-				MotorL(FORWARD(255));
-				MotorR(FORWARD(255));
+				MotorL(FORWARD(100));
+				MotorR(FORWARD(100));
 				return ENDIF(CHECKALL);
 			}
 			return END; 
 			
 		case 0x1: //Omae Wa Mou Shindeiru left (A5)
 			if (millis - start < 1000) {
-				MotorL(FORWARD(70));
+				MotorL(FORWARD(85));
 				MotorR(FORWARD(127));
 				return NOCHECK;
 			}
 			if (millis - start < 1500) {
-				MotorL(FORWARD(70));
+				MotorL(FORWARD(85));
 				MotorR(FORWARD(127));
 				return ENDIF(CHECKDIST);
 			}
 			if (millis - start < 1500 + ROT_DELAY(90)) {
-				MotorR(FORWARD(255));
-				MotorL(BACKWARD(255));
+				ROT_LEFT;
 				return ENDIF(CHECKDIST);
 			}
 			return END;
 			
 		case 0x2: //Omae Wa Mou Shindeiru Right (A1)
 			if (millis - start < 1000) {
-				MotorR(FORWARD(70));
+				MotorR(FORWARD(85));
 				MotorL(FORWARD(127));
 				return NOCHECK;
 			}
 			if (millis - start < 1500) {
-				MotorR(FORWARD(70));
+				MotorR(FORWARD(85));
 				MotorL(FORWARD(127));
 				return ENDIF(CHECKDIST);
 			}
 			if (millis - start < 1500 + ROT_DELAY(90)) {
-				MotorL(FORWARD(255));
-				MotorR(BACKWARD(255));
+				ROT_RIGHT;
 				return ENDIF(CHECKDIST);
 			}
 			return END;
 			
 		case 0x3: //Wait for enemy (check front, left and right) (A3)
 			if (millis - start < ROT_DELAY(45)) {
-				MotorR(FORWARD(255));
-				MotorL(BACKWARD(255));
+				ROT_LEFT;
 				return ENDIF(CHECKALL);
 			}
 			if (millis - start < ROT_DELAY(45) + 200) {
@@ -344,34 +343,17 @@ uint8_t CSL() {
 				MotorL(STOP);
 				return ENDIF(CHECKALL);
 			}
-			if (millis - start < 2*ROT_DELAY(45) + 200) {
-				MotorR(BACKWARD(255));
-				MotorL(FORWARD(255));
-				return ENDIF(CHECKALL);
-			}
-			if (millis - start < 2*ROT_DELAY(45) + 400) {
-				MotorR(STOP);
-				MotorL(STOP);
+			if (millis - start < 3*ROT_DELAY(45) + 200) {
+				ROT_RIGHT;
 				return ENDIF(CHECKALL);
 			}
 			if (millis - start < 3*ROT_DELAY(45) + 400) {
-				MotorR(BACKWARD(255));
-				MotorL(FORWARD(255));
-				return ENDIF(CHECKALL);
-			}
-			if (millis - start < 3*ROT_DELAY(45) + 600) {
 				MotorR(STOP);
 				MotorL(STOP);
 				return ENDIF(CHECKALL);
 			}
-			if (millis - start < 4*ROT_DELAY(45) + 600) {
-				MotorR(FORWARD(255));
-				MotorL(BACKWARD(255));
-				return ENDIF(CHECKALL);
-			}
-			if (millis - start < 4*ROT_DELAY(45) + 800) {
-				MotorR(STOP);
-				MotorL(STOP);
+			if (millis - start < 4*ROT_DELAY(45) + 400) {
+				ROT_LEFT;
 				return ENDIF(CHECKALL);
 			}
 			start = millis;
@@ -389,34 +371,31 @@ void CPL() {
 	//Check the two lsb
 	switch (dip & 0b0011) {
 		case 0x0: //GO FORWARD 200
-			MotorL(FORWARD(200));
-			MotorR(FORWARD(200));
+			MotorL(FORWARD(100));
+			MotorR(FORWARD(100));
 			break;
 			
 		case 0x1: //ZigZag
 			if (millis - start < ROT_DELAY(45)) {
-				MotorL(BACKWARD(255));
-				MotorR(FORWARD(255));
+				ROT_LEFT;
 				return;
 			}
 			if (millis - start < ROT_DELAY(45) + 200) {
-				MotorL(FORWARD(200));
-				MotorR(FORWARD(200));
+				MotorL(FORWARD(100));
+				MotorR(FORWARD(100));
 				return;
 			}
 			if (millis - start < ROT_DELAY(90) + ROT_DELAY(45) + 200) {
-				MotorL(FORWARD(255));
-				MotorR(BACKWARD(255));
+				ROT_RIGHT;
 				return;
 			}
 			if (millis - start < ROT_DELAY(90) + ROT_DELAY(45) + 2*200) {
-				MotorL(FORWARD(200));
-				MotorR(FORWARD(200));
+				MotorL(FORWARD(100));
+				MotorR(FORWARD(100));
 				return;
 			}
 			if (millis - start <  ROT_DELAY(90) + 2*ROT_DELAY(45) + 2*200) {
-				MotorL(BACKWARD(255));
-				MotorR(FORWARD(255));
+				ROT_LEFT;
 				return;
 			}
 			start = millis;
@@ -424,46 +403,42 @@ void CPL() {
 			
 		case 0x2: //Woodpecker
 			if (millis - start < ROT_DELAY(45)) {
-				MotorL(BACKWARD(255));
-				MotorR(FORWARD(255));
+				ROT_LEFT;
 				return;
 			}
-			if (millis - start < ROT_DELAY(45) + 200) {
-				MotorL(FORWARD(200));
-				MotorR(FORWARD(200));
+			if (millis - start < ROT_DELAY(45) + 500) {
+				MotorL(STOP);
+				MotorR(STOP);
 				return;
 			}
 			if (millis - start < ROT_DELAY(45) + 500 + 200) {
-				MotorL(STOP);
-				MotorR(STOP);
+				MotorL(FORWARD(100));
+				MotorR(FORWARD(100));
 				return;
 			}
-			if (millis - start < ROT_DELAY(90) + ROT_DELAY(45) + 200 + 500) {
-				MotorL(FORWARD(255));
-				MotorR(BACKWARD(255));
+			if (millis - start < ROT_DELAY(90) + ROT_DELAY(45) + 500 + 200) {
+				ROT_RIGHT;
 				return; 
 			}
-			if (millis - start < ROT_DELAY(90) + ROT_DELAY(45) + 2*200 + 500) {
-				MotorL(FORWARD(200));
-				MotorR(FORWARD(200));
-				return;
-			}
-			if (millis - start < ROT_DELAY(90) + ROT_DELAY(45) + 3*200 + 2*500) {
+			if (millis - start < ROT_DELAY(90) + ROT_DELAY(45) + 200 + 2*500) {
 				MotorL(STOP);
 				MotorR(STOP);
 				return;
 			}
-			if (millis - start <  ROT_DELAY(90) + 2*ROT_DELAY(45) + 4*200 + 2*500) {
-				MotorL(BACKWARD(255));
-				MotorR(FORWARD(255));
+			if (millis - start < ROT_DELAY(90) + ROT_DELAY(45) + 2*200 + 2*500) {
+				MotorL(FORWARD(100));
+				MotorR(FORWARD(100));
+				return;
+			}
+			if (millis - start <  ROT_DELAY(90) + 2*ROT_DELAY(45) + 2*200 + 2*500) {
+				ROT_LEFT;
 				return;
 			}
 			start = millis;
 			break;
 			
 		case 0x3: //Tornado
-			MotorL(BACKWARD(200));
-			MotorR(FORWARD(200));
+			ROT_RIGHT;
 			break;
 	}
 }
@@ -473,21 +448,30 @@ void FDL(uint8_t sensors) {
 	switch (sensors) {
 		case 0b01: //right detect
 		MotorL(BACKWARD(255));
-		MotorR(FORWARD(255));
+		MotorR(BACKWARD(255));
+		while (lineCheck()) {};
+		ROT_LEFT;
 		_delay_ms(ROT_DELAY(90));
+		MotorL(STOP);
+		MotorR(STOP);
 		break;
 		case 0b10:  //left detect
-		MotorL(FORWARD(255));
+		MotorL(BACKWARD(255));
 		MotorR(BACKWARD(255));
+		while (lineCheck()) {};
+		ROT_RIGHT;
 		_delay_ms(ROT_DELAY(90));
+		MotorL(STOP);
+		MotorR(STOP);
 		break;
 		case 0b11: //frontal detect
 		MotorL(BACKWARD(255));
 		MotorR(BACKWARD(255));
-		_delay_ms(150);
-		MotorL(FORWARD(255));
-		MotorR(BACKWARD(255));
+		while (lineCheck()) {};
+		ROT_RIGHT;
 		_delay_ms(ROT_DELAY(180));
+		MotorL(STOP);
+		MotorR(STOP);
 		break;
 	}
 }
@@ -497,12 +481,12 @@ void FAL(uint8_t sensors) {
 	do {
 		switch (sensors) {
 			case 0b01: //right detect
-			MotorL(FORWARD(200));
-			MotorR(BACKWARD(200));
+			MotorL(FORWARD(255));
+			MotorR(BACKWARD(255));
 			break;
 			case 0b10: //left detect
-			MotorL(BACKWARD(200));
-			MotorR(FORWARD(200));
+			MotorL(BACKWARD(255));
+			MotorR(FORWARD(255));
 			break;
 			case 0b11: //frontal detect
 			MotorL(FORWARD(255));
