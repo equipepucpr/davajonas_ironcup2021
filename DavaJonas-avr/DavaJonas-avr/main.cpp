@@ -31,6 +31,13 @@ void __cxa_guard_abort (__guard *) {};
 #define ROT_LEFT  MotorR(FORWARD(200)); MotorL(BACKWARD(200));
 #define ROT_RIGHT MotorR(BACKWARD(200)); MotorL(FORWARD(200));
 
+//OMAE WA Compensation
+#define OMAE_PROP 1.45F
+#define OMAE_MAX 255
+#define OMAE_MIN ((uint8_t) OMAE_MAX / OMAE_PROP)
+#define OMAE_TIME 1500
+#define OMAE_BLIND ((uint8_t) OMAE_TIME / 1.5F)
+
 //Line sensor threshold
 #define LINE_THRESHOLD 700 //Analog threshold for Dohyo line detection
 
@@ -300,34 +307,34 @@ uint8_t CSL() {
 			return END; 
 			
 		case 0x1: //Omae Wa Mou Shindeiru left (A5)
-			if (millis - start < 1000) {
-				MotorL(FORWARD(85));
-				MotorR(FORWARD(127));
+			if (millis - start < OMAE_BLIND) {
+				MotorL(FORWARD(OMAE_MIN));
+				MotorR(FORWARD(OMAE_MAX));
 				return NOCHECK;
 			}
-			if (millis - start < 1500) {
-				MotorL(FORWARD(85));
-				MotorR(FORWARD(127));
+			if (millis - start < OMAE_TIME) {
+				MotorL(FORWARD(OMAE_MIN));
+				MotorR(FORWARD(OMAE_MAX));
 				return ENDIF(CHECKDIST);
 			}
-			if (millis - start < 1500 + ROT_DELAY(90)) {
+			if (millis - start < OMAE_TIME + ROT_DELAY(90)) {
 				ROT_LEFT;
 				return ENDIF(CHECKDIST);
 			}
 			return END;
 			
 		case 0x2: //Omae Wa Mou Shindeiru Right (A1)
-			if (millis - start < 1000) {
-				MotorR(FORWARD(85));
-				MotorL(FORWARD(127));
+			if (millis - start < OMAE_BLIND) {
+				MotorR(FORWARD(OMAE_MIN));
+				MotorL(FORWARD(OMAE_MAX));
 				return NOCHECK;
 			}
-			if (millis - start < 1500) {
-				MotorR(FORWARD(85));
-				MotorL(FORWARD(127));
+			if (millis - start < OMAE_TIME) {
+				MotorR(FORWARD(OMAE_MIN));
+				MotorL(FORWARD(OMAE_MAX));
 				return ENDIF(CHECKDIST);
 			}
-			if (millis - start < 1500 + ROT_DELAY(90)) {
+			if (millis - start < OMAE_TIME + ROT_DELAY(90)) {
 				ROT_RIGHT;
 				return ENDIF(CHECKDIST);
 			}
