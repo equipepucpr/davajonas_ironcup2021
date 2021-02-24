@@ -35,7 +35,7 @@ void __cxa_guard_abort (__guard *) {};
 #define OMAE_PROP 1.65F
 #define OMAE_MAX 255
 #define OMAE_MIN ((uint8_t) OMAE_MAX / OMAE_PROP)
-#define OMAE_TIME 1000
+#define OMAE_TIME 900
 #define OMAE_BLIND ((uint8_t) OMAE_TIME * 0.75F)
 
 //Line sensor threshold
@@ -455,7 +455,7 @@ void CPL() {
 void FDL(uint8_t sensors) {
 	MotorL(BACKWARD(255));
 	MotorR(BACKWARD(255));
-	_delay_ms(5);
+	_delay_ms(10);
 	while (lineCheck()) {};
 	uint16_t rotdelay = 0;
 	uint32_t start = millis;
