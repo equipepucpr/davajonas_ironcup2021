@@ -190,6 +190,7 @@ int main(void)
 	PORTC = 0;
 	ADCSRA = (1 << ADPS0) | (1 << ADPS1) | (1 << ADPS2) | (1 << ADEN);
 	ADMUX = (1 << REFS0); //set ADC VRef to AVCC
+	DIDR0 = 0b11; //Disable digital input for A0 and A1
 	
 	//microst input interrupt (INT0 - PD2)
 	EICRA |= (1 << ISC01); //Trigger when a falling edge is detected
@@ -211,16 +212,16 @@ int main(void)
 	
 	log("Ready!\n");
 	
-	//While microST is low (0v) don't do anything
-	while (!(PIND & (1 << microST))) {};
-	log("Starting...\n");
-	
 	//set DIP value
 #ifdef DIP_VAL
 	dip = DIP_VAL;
 #else
 	dip = readDIP();
 #endif
+	
+	//While microST is low (0v) don't do anything
+	while (!(PIND & (1 << microST))) {};
+	log("Starting...\n");
 
 	//Main program loop -> It should never return to main
 	RTDM();
@@ -452,35 +453,37 @@ void CPL() {
 
 //Fixed Defense Logic
 void FDL(uint8_t sensors) {
+	MotorL(BACKWARD(255));
+	MotorR(BACKWARD(255));
+	_delay_ms(5);
+	while (lineCheck()) {};
+	uint16_t rotdelay = 0;
+	uint32_t start = millis;
 	switch (sensors) {
 		case 0b01: //right detect
-		MotorL(BACKWARD(255));
-		MotorR(BACKWARD(255));
-		while (lineCheck()) {};
-		ROT_LEFT;
-		_delay_ms(ROT_DELAY(90));
-		MotorL(STOP);
-		MotorR(STOP);
-		break;
+			ROT_LEFT;
+			rotdelay = ROT_DELAY(90);
+			break;
 		case 0b10:  //left detect
-		MotorL(BACKWARD(255));
-		MotorR(BACKWARD(255));
-		while (lineCheck()) {};
-		ROT_RIGHT;
-		_delay_ms(ROT_DELAY(90));
-		MotorL(STOP);
-		MotorR(STOP);
-		break;
+			ROT_RIGHT;
+			rotdelay = ROT_DELAY(90);
+			break;
 		case 0b11: //frontal detect
-		MotorL(BACKWARD(255));
-		MotorR(BACKWARD(255));
-		while (lineCheck()) {};
-		ROT_RIGHT;
-		_delay_ms(ROT_DELAY(180));
-		MotorL(STOP);
-		MotorR(STOP);
-		break;
+			ROT_RIGHT;
+			rotdelay = ROT_DELAY(180);
+			break;
 	}
+	
+	uint8_t distSensor;
+	while (millis - start < rotdelay) {
+		distSensor = distCheck();
+		if (distSensor) { //If any sensor is triggered
+			FAL(distSensor); //Fixed Attack Logic
+			return; //Skip everything else
+		}
+	}
+	MotorL(STOP);
+	MotorR(STOP);
 }
 
 //Fixed Attack Logic
