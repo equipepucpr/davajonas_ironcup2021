@@ -28,14 +28,14 @@ void __cxa_guard_abort (__guard *) {};
 //Motor Rotate Compensation (Compensate the time needed to rotate X degrees)
 #define PERCENT 1.0F
 #define ROT_DELAY(x) ((uint8_t) x * (PERCENT * 395.0F/180.0F))
-#define ROT_LEFT  MotorR(FORWARD(200)); MotorL(BACKWARD(200));
-#define ROT_RIGHT MotorR(BACKWARD(200)); MotorL(FORWARD(200));
+#define ROT_LEFT  MotorR(FORWARD(200)); MotorL(BACKWARD(200))
+#define ROT_RIGHT MotorL(FORWARD(200)); MotorR(BACKWARD(200))
 
 //OMAE WA Compensation
-#define OMAE_PROP 1.45F
+#define OMAE_PROP 1.65F
 #define OMAE_MAX 255
 #define OMAE_MIN ((uint8_t) OMAE_MAX / OMAE_PROP)
-#define OMAE_TIME 750
+#define OMAE_TIME 1000
 #define OMAE_BLIND ((uint8_t) OMAE_TIME * 0.75F)
 
 //Line sensor threshold
@@ -217,8 +217,8 @@ int main(void)
 	
 	//set DIP value
 #ifdef DIP_VAL
-dip = DIP_VAL;
-	#else
+	dip = DIP_VAL;
+#else
 	dip = readDIP();
 #endif
 
