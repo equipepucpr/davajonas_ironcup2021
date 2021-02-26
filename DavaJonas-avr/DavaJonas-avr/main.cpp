@@ -36,7 +36,7 @@ void __cxa_guard_abort (__guard *) {};
 #define OMAE_MAX 255
 #define OMAE_MIN ((uint8_t) OMAE_MAX / OMAE_PROP)
 #define OMAE_TIME 900
-#define OMAE_BLIND ((uint8_t) OMAE_TIME * 0.75F)
+#define OMAE_BLIND ((uint8_t) OMAE_TIME * 0.25F)
 
 //Line sensor threshold
 #define LINE_THRESHOLD 700 //Analog threshold for Dohyo line detection
@@ -318,7 +318,7 @@ uint8_t CSL() {
 				MotorR(FORWARD(OMAE_MAX));
 				return ENDIF(CHECKDIST);
 			}
-			if (millis - start < OMAE_TIME + ROT_DELAY(90)) {
+			if (millis - start < OMAE_TIME + ROT_DELAY(110)) {
 				ROT_LEFT;
 				return ENDIF(CHECKDIST);
 			}
@@ -335,7 +335,7 @@ uint8_t CSL() {
 				MotorL(FORWARD(OMAE_MAX));
 				return ENDIF(CHECKDIST);
 			}
-			if (millis - start < OMAE_TIME + ROT_DELAY(90)) {
+			if (millis - start < OMAE_TIME + ROT_DELAY(110)) {
 				ROT_RIGHT;
 				return ENDIF(CHECKDIST);
 			}
