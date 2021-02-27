@@ -300,9 +300,9 @@ uint8_t CSL() {
 	//Check the two msb
 	switch ((dip & 0b1100) >> 2) {
 		case 0x0: //GO FORWARD (A3/B3)
-			if (millis - start < 400) {
-				MotorL(FORWARD(100));
-				MotorR(FORWARD(100));
+			if (millis - start < 250) {
+				MotorL(FORWARD(255));
+				MotorR(FORWARD(255));
 				return ENDIF(CHECKALL);
 			}
 			return END; 
